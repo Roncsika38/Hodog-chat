@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<body style="background:black;color:lime;">
+<input id="name" placeholder="név">
+<button onclick="join()">belép</button>
+<div id="chat"></div>
+<input id="msg">
+<button onclick="send()">küld</button>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+function join(){
+  socket.emit("join", document.getElementById("name").value);
+}
+
+function send(){
+  socket.emit("chat", document.getElementById("msg").value);
+}
+
+socket.on("chat", (data)=>{
+  document.getElementById("chat").innerHTML += 
+  "<div>"+data.user+": "+data.message+"</div>";
+});
+</script>
+</body>
+</html>
