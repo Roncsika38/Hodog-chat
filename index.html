@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Chat</h2>
+
+<input id="name" placeholder="Neved"><br><br>
+<input id="msg" placeholder="Üzenet">
+<button onclick="send()">Küldés</button>
+
+<ul id="messages"></ul>
+
+<script>
+let ws = new WebSocket("wss://ws.ifelse.io");
+
+ws.onmessage = function(e) {
+  let li = document.createElement("li");
+  li.innerText = e.data;
+  document.getElementById("messages").appendChild(li);
+};
+
+function send() {
+  let name = document.getElementById("name").value;
+  let msg = document.getElementById("msg").value;
+  ws.send(name + ": " + msg);
+}
+</script>
+
+</body>
+</html>
