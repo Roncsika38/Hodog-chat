@@ -1,2 +1,0 @@
-# Hodog-chat
-Privalte
