@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hodog Chat</title>
+</head>
+<body>
+
+<h2>Hodog Chat</h2>
+
+<input id="username" placeholder="Neved">
+<button onclick="join()">Csatlakozás</button>
+
+<ul id="messages"></ul>
+
+<input id="msg" placeholder="Írj üzenetet">
+<button onclick="send()">Küldés</button>
+
+<h3>Online:</h3>
+<ul id="users"></ul>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let username = "";
+
+function join() {
+  username = document.getElementById("username").value;
+  socket.emit("join", username);
+}
+
+function send() {
+  const msg = document.getElementById("msg").value;
+  socket.emit("message", { username, msg });
+}
+
+socket.on("message", (data) => {
+  const li = document.createElement("li");
+  li.textContent = data.username + ": " + data.msg;
+  document.getElementById("messages").appendChild(li);
+});
+
+socket.on("users", (users) => {
+  const list = document.getElementById("users");
+  list.innerHTML = "";
+  users.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u.username;
+    list.appendChild(li);
+  });
+});
+</script>
+
+</body>
+</html>
