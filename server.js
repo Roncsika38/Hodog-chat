@@ -1,16 +1,31 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
+const io = new Server(server);
 
-// 🔥 EZ A LÉNYEG
+// 🔥 static fájlok (public mappa)
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// 🔥 amikor valaki csatlakozik
+io.on("connection", (socket) => {
+  console.log("Felhasználó csatlakozott");
+
+  // üzenet fogadás
+  socket.on("chat message", (msg) => {
+    io.emit("chat message", msg); // mindenki megkapja
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Felhasználó kilépett");
+  });
 });
 
-app.listen(PORT, () => {
+// 🔥 szerver indítás
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
   console.log("Server fut: " + PORT);
 });
