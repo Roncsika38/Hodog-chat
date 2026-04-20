@@ -1,209 +1,199 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-<meta charset="UTF-8">
-<title>Hodog Modern Chat</title>
+  <meta charset="UTF-8">
+  <title>Hodog Chat</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+    }
 
-<style>
-body {
-    margin: 0;
-    font-family: 'Segoe UI';
-    background: #f0f2f5;
-}
+    .center {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
 
-#app {
-    display: flex;
-    height: 100vh;
-}
+    .box {
+      background: #1e293b;
+      padding: 30px;
+      border-radius: 10px;
+      width: 300px;
+    }
 
-/* SIDEBAR */
-#sidebar {
-    width: 260px;
-    background: #2f3136;
-    color: white;
-    padding: 15px;
-}
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+    }
 
-#sidebar h2 {
-    margin-top: 0;
-}
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background: #22c55e;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-/* CHAT */
-#chat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
+    #chat {
+      display: none;
+      height: 100vh;
+      display: flex;
+    }
 
-#messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 15px;
-}
+    #sidebar {
+      width: 200px;
+      background: #020617;
+      padding: 20px;
+    }
 
-.msg {
-    background: white;
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 10px;
-}
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
 
-.admin {
-    border-left: 4px solid red;
-}
+    #messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
 
-#input {
-    display: flex;
-    padding: 10px;
-    background: white;
-}
+    .msg {
+      margin-bottom: 10px;
+    }
 
-#input input {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-}
+    .admin {
+      color: #f43f5e;
+    }
 
-button {
-    margin-left: 5px;
-    padding: 10px;
-    border: none;
-    background: #5865F2;
-    color: white;
-    border-radius: 8px;
-    cursor: pointer;
-}
+    #inputBox {
+      display: flex;
+      padding: 10px;
+      background: #1e293b;
+    }
 
-/* LOGIN */
-#login {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+    #inputBox input {
+      flex: 1;
+      margin: 0;
+    }
 
-#loginBox {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-}
-</style>
+    #inputBox button {
+      width: 100px;
+      margin-left: 10px;
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="login">
-    <div id="loginBox">
-        <h2>Belépés / Regisztráció</h2>
-        <input id="name" placeholder="Felhasználónév"><br><br>
-        <button onclick="login()">Belépés</button>
-    </div>
+<div id="auth" class="center">
+  <div class="box">
+    <h2>Bejelentkezés</h2>
+    <input id="user" placeholder="Felhasználónév">
+    <input id="pass" type="password" placeholder="Jelszó">
+    <button onclick="login()">Belépés</button>
+    <button onclick="register()">Regisztráció</button>
+  </div>
 </div>
 
-<div id="app">
+<div id="chat">
+  <div id="sidebar">
+    <h3>Online</h3>
+    <div id="users"></div>
+  </div>
 
-    <div id="sidebar">
-        <h2>💬 Hodog Chat</h2>
-        <p id="me"></p>
+  <div id="main">
+    <div id="messages"></div>
 
-        <h3>Online</h3>
-        <ul id="users"></ul>
-
-        <hr>
-
-        <h3>Admin</h3>
-        <button onclick="clearChat()">Chat törlés</button>
+    <div id="inputBox">
+      <input id="msgInput" placeholder="Írj üzenetet...">
+      <button onclick="send()">Küld</button>
     </div>
-
-    <div id="chat">
-        <div id="messages"></div>
-
-        <div id="input">
-            <input id="msg" placeholder="Írj..." onkeypress="key(event)">
-            <button onclick="send()">Küld</button>
-        </div>
-    </div>
-
+  </div>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
+let socket;
 let username = "";
+let role = "";
 
-/* LOGIN */
-function login() {
-    username = document.getElementById("name").value;
-    if (!username) return;
+async function register() {
+  const u = user.value;
+  const p = pass.value;
 
-    localStorage.setItem("user", username);
+  await fetch("/register", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ username: u, password: p })
+  });
 
-    document.getElementById("login").style.display = "none";
-    document.getElementById("me").innerText = "Te: " + username;
-
-    socket.emit("join", username);
+  alert("Regisztrálva!");
 }
 
-/* AUTO LOGIN */
-window.onload = () => {
-    let saved = localStorage.getItem("user");
-    if (saved) {
-        document.getElementById("name").value = saved;
-        login();
-    }
-};
+async function login() {
+  const u = user.value;
+  const p = pass.value;
 
-/* ENTER */
-function key(e) {
-    if (e.key === "Enter") send();
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ username: u, password: p })
+  });
+
+  const data = await res.json();
+
+  if (!data.success) return alert("Hibás adatok");
+
+  username = data.user.username;
+  role = data.user.role;
+
+  startChat();
 }
 
-/* SEND */
+function startChat() {
+  document.getElementById("auth").style.display = "none";
+  document.getElementById("chat").style.display = "flex";
+
+  socket = io();
+
+  socket.emit("join", username);
+
+  socket.on("loadMessages", msgs => {
+    msgs.forEach(addMsg);
+  });
+
+  socket.on("message", addMsg);
+}
+
 function send() {
-    let msg = document.getElementById("msg").value;
-    if (!msg) return;
-
-    socket.emit("message", { msg });
-    document.getElementById("msg").value = "";
+  const msg = msgInput.value;
+  socket.emit("message", msg);
+  msgInput.value = "";
 }
 
-/* ADMIN */
-function clearChat() {
-    socket.emit("clear");
+function addMsg(m) {
+  const div = document.createElement("div");
+  div.className = "msg";
+
+  if (m.username === "roncsika38") {
+    div.innerHTML = `<b class="admin">[ADMIN] ${m.username}</b>: ${m.msg}`;
+  } else {
+    div.innerHTML = `<b>${m.username}</b>: ${m.msg}`;
+  }
+
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
 }
-
-/* RECEIVE */
-socket.on("message", (d) => {
-    let div = document.createElement("div");
-    div.className = "msg";
-
-    if (d.role === "admin") div.classList.add("admin");
-
-    div.innerHTML = `<b>${d.username}</b>: ${d.msg}`;
-    document.getElementById("messages").appendChild(div);
-});
-
-/* USERS */
-socket.on("users", (u) => {
-    let ul = document.getElementById("users");
-    ul.innerHTML = "";
-
-    u.forEach(x => {
-        let li = document.createElement("li");
-        li.textContent = x.name + (x.role === "admin" ? " 👑" : "");
-        ul.appendChild(li);
-    });
-});
-
-/* CLEAR */
-socket.on("clear", () => {
-    document.getElementById("messages").innerHTML = "";
-});
 </script>
 
 </body>
