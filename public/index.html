@@ -1,55 +1,107 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Hodog Chat</title>
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+<style>
+body {
+    display: flex;
+    justify-content: center;
+    background: black;
+    color: lime;
+    font-family: monospace;
+}
 
-app.use(express.static("public"));
+#chat {
+    width: 600px;
+    border: 2px solid lime;
+    padding: 10px;
+}
 
-let users = {};
-let admins = ["roncsika38"]; // 👑 ide írd a neved
+#messages {
+    height: 300px;
+    overflow-y: scroll;
+    border: 1px solid lime;
+    margin: 10px 0;
+    padding: 5px;
+}
 
-io.on("connection", (socket) => {
+#sidebar {
+    width: 200px;
+    margin-left: 20px;
+    border: 2px solid lime;
+    padding: 10px;
+}
+</style>
 
-    socket.on("join", (username) => {
-        socket.username = username;
+</head>
+<body>
 
-        users[socket.id] = {
-            name: username,
-            admin: admins.includes(username)
-        };
+<div id="chat">
+    <h2>🔥 HODOG CHAT 🔥</h2>
 
-        io.emit("message", {
-            username: "🔔",
-            msg: username + " belépett"
-        });
+    <input id="username" placeholder="Név">
+    <button onclick="join()">Belépés</button>
 
-        io.emit("users", Object.values(users));
-    });
+    <div id="messages"></div>
 
-    socket.on("message", (data) => {
-        io.emit("message", data);
-    });
+    <input id="msg" placeholder="Írj valamit...">
+    <button onclick="send()">Küld</button>
+</div>
 
-    socket.on("disconnect", () => {
-        const user = users[socket.id];
+<div id="sidebar">
+    <h3>👥 Online</h3>
+    <ul id="userList"></ul>
+</div>
 
-        if (user) {
-            io.emit("message", {
-                username: "🔔",
-                msg: user.name + " kilépett"
-            });
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let username = "";
+
+function join() {
+    username = document.getElementById("username").value;
+    socket.emit("join", username);
+}
+
+function send() {
+    const msg = document.getElementById("msg").value;
+    if (!msg) return;
+
+    socket.emit("message", { username, msg });
+    document.getElementById("msg").value = "";
+}
+
+socket.on("message", (data) => {
+    const div = document.createElement("div");
+
+    div.innerHTML = "<b>" + data.username + ":</b> " + data.msg;
+
+    document.getElementById("messages").appendChild(div);
+
+    const box = document.getElementById("messages");
+    box.scrollTop = box.scrollHeight;
+});
+
+socket.on("users", (users) => {
+    const list = document.getElementById("userList");
+    list.innerHTML = "";
+
+    users.forEach((u) => {
+        const li = document.createElement("li");
+
+        if (u.admin) {
+            li.innerHTML = "👑 " + u.name;
+            li.style.color = "red";
+        } else {
+            li.textContent = u.name;
         }
 
-        delete users[socket.id];
-        io.emit("users", Object.values(users));
+        list.appendChild(li);
     });
-
 });
+</script>
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log("Server fut: " + PORT);
-});
+</body>
+</html>
