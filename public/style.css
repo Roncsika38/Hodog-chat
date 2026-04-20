@@ -1,31 +1,63 @@
-body { margin:0; font-family:Arial; display:flex; height:100vh; }
-
-#chat { display:flex; width:100%; }
-
-#sidebar {
-  width:200px;
-  background:#111;
-  color:white;
-  padding:10px;
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
 }
 
-#main {
-  flex:1;
-  display:flex;
-  flex-direction:column;
+#auth {
+  text-align: center;
+  margin-top: 100px;
+}
+
+input {
+  display: block;
+  margin: 10px auto;
+  padding: 10px;
+  width: 200px;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+#chat {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 200px;
+  background: #1e293b;
+  padding: 10px;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 #messages {
-  flex:1;
-  padding:10px;
-  overflow-y:auto;
+  flex: 1;
+  padding: 10px;
+  overflow-y: scroll;
 }
 
-#input {
-  display:flex;
+.message {
+  margin: 5px 0;
 }
 
-#input input {
-  flex:1;
-  padding:10px;
+.input {
+  display: flex;
+}
+
+.input input {
+  flex: 1;
+}
+
+.input button {
+  width: 100px;
 }
