@@ -21,14 +21,31 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-let username = "";
+let username = null;
 
 function join() {
+  username = document.getElementById("username").value;
+
+  if (!username) {
+    alert("Adj meg nevet!");
+    return;
+  }
+
+  socket.emit("join", username);
+}
   username = document.getElementById("username").value;
   socket.emit("join", username);
 }
 
 function send() {
+  if (!username) {
+    alert("Előbb csatlakozz!");
+    return;
+  }
+
+  const msg = document.getElementById("msg").value;
+  socket.emit("message", { username, msg });
+}
   const msg = document.getElementById("msg").value;
   socket.emit("message", { username, msg });
 }
