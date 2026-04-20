@@ -12,12 +12,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-// 👉 MONGO (IDE A SAJÁTOD)
-mongoose.connect("mongodb+srv://roncsika635:Csicso1987%40%40%40@cluster0.1t1l5jo.mongodb.net/chat");
+/* ======================
+   🔥 MONGODB CONNECT
+====================== */
+mongoose.connect("mongodb+srv://roncsika635:Csicso1987%40%40%40@cluster0.1t1l5jo.mongodb.net/chat")
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => console.log(err));
 
-console.log("Mongo connected");
-
-// MODEL
+/* ======================
+   👤 USER MODEL
+====================== */
 const User = mongoose.model("User", {
   username: String,
   password: String,
@@ -25,80 +29,71 @@ const User = mongoose.model("User", {
   avatar: String
 });
 
+/* ======================
+   💬 MESSAGE MODEL
+====================== */
 const Message = mongoose.model("Message", {
   username: String,
   text: String,
-  likes: { type: Number, default: 0 }
+  time: String
 });
 
-// 👉 FŐ ADMIN (AUTO)
-async function createAdmin() {
-  const exists = await User.findOne({ username: "Zoltan" });
-  if (!exists) {
-    await User.create({
-      username: "Zoltan",
-      password: "1234",
-      role: "owner"
-    });
-    console.log("Admin created");
-  }
-}
-createAdmin();
-
-// REGISTER
+/* ======================
+   🔐 REGISTER
+====================== */
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
   const exists = await User.findOne({ username });
-  if (exists) return res.json({ error: "Létezik" });
+  if (exists) return res.json({ error: "Már létezik!" });
 
-  await User.create({
-    username,
-    password,
-    role: "user"
-  });
+  const role = username === "Predator" ? "admin" : "user";
+
+  await User.create({ username, password, role });
 
   res.json({ success: true });
 });
 
-// LOGIN
+/* ======================
+   🔑 LOGIN
+====================== */
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   const user = await User.findOne({ username, password });
-  if (!user) return res.json({ error: "Hibás adat" });
+  if (!user) return res.json({ error: "Hibás adat!" });
 
-  res.json(user);
+  res.json({ success: true, user });
 });
 
-// SOCKET
+/* ======================
+   🔌 SOCKET CHAT
+====================== */
 io.on("connection", (socket) => {
-  socket.on("join", async (user) => {
-    socket.user = user;
+
+  socket.on("join", async (username) => {
+    socket.username = username;
 
     const messages = await Message.find().limit(50);
-    socket.emit("messages", messages);
+    socket.emit("loadMessages", messages);
   });
 
   socket.on("message", async (msg) => {
     const data = {
-      username: socket.user.username,
-      text: msg
+      username: socket.username,
+      text: msg,
+      time: new Date().toLocaleTimeString()
     };
 
-    const saved = await Message.create(data);
-    io.emit("message", saved);
+    await Message.create(data);
+    io.emit("message", data);
   });
 
-  socket.on("like", async (id) => {
-    const msg = await Message.findById(id);
-    msg.likes++;
-    await msg.save();
-
-    io.emit("update", msg);
-  });
 });
 
+/* ======================
+   🚀 SERVER
+====================== */
 server.listen(process.env.PORT || 3000, () => {
-  console.log("Server fut");
+  console.log("🔥 Server fut");
 });
