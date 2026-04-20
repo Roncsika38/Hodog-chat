@@ -1,186 +1,55 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Hodog Chat</title>
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
-<style>
-body {
-    background: black;
-    font-family: Verdana;
-    color: lime;
-}
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-#chat {
-    width: 650px;
-    margin: 20px auto;
-    border: 3px solid lime;
-    padding: 10px;
-}
+app.use(express.static("public"));
 
-h2 {
-    text-align: center;
-    color: yellow;
-    text-shadow: 0 0 10px yellow;
-}
-
-#messages {
-    height: 320px;
-    overflow-y: scroll;
-    border: 2px solid lime;
-    padding: 5px;
-    background: black;
-    font-size: 14px;
-}
-
-.msg { margin: 2px 0; }
-
-.name { font-weight: bold; }
-
-input {
-    background: black;
-    color: lime;
-    border: 1px solid lime;
-    padding: 5px;
-}
-
-button {
-    background: lime;
-    border: none;
-    padding: 5px 10px;
-    cursor: pointer;
-}
-
-#users {
-    margin-top: 10px;
-    border-top: 1px solid lime;
-    padding-top: 5px;
-}
-
-.admin { color: red; }
-.private { color: cyan; }
-.time { color: gray; }
-</style>
-</head>
-
-<body>
-
-<div id="chat">
-<h2>🔥 HODOG CHAT 🔥</h2>
-
-<input id="username" placeholder="Név">
-<button onclick="join()">Belépés</button>
-
-<div id="messages"></div>
-
-<input id="msg" placeholder="Írj valamit...">
-<button onclick="send()">Küld</button>
-
-<div id="users">
-<b>Online:</b>
-<ul id="userList"></ul>
-</div>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket = io();
 let users = {};
+let admins = ["roncsika38"]; // 👑 ide írd a neved
 
-// ENTER küldés
-document.getElementById("msg").addEventListener("keypress", function(e){
-    if(e.key === "Enter") send();
-});
+io.on("connection", (socket) => {
 
-// idő
-function getTime() {
-    const d = new Date();
-    return "[" + d.getHours().toString().padStart(2,"0") + ":" +
-                 d.getMinutes().toString().padStart(2,"0") + "]";
-}
+    socket.on("join", (username) => {
+        socket.username = username;
 
-// emoji
-function parseEmoji(text) {
-    return text
-        .replaceAll(":smile:", "😄")
-        .replaceAll(":fire:", "🔥")
-        .replaceAll(":heart:", "❤️");
-}
+        users[socket.id] = {
+            name: username,
+            admin: admins.includes(username)
+        };
 
-function join() {
-    username = document.getElementById("username").value;
-    socket.emit("join", username);
-}
-
-function send() {
-    let msg = document.getElementById("msg").value;
-    if(!msg) return;
-
-    // ADMIN COMMANDS
-    if(username === "admin") {
-        if(msg === "/clear") {
-            document.getElementById("messages").innerHTML = "";
-            return;
-        }
-    }
-
-    // PRIVATE MESSAGE
-    if(msg.startsWith("/w ")) {
-        const parts = msg.split(" ");
-        const target = parts[1];
-        const message = parts.slice(2).join(" ");
-
-        addMessage({
-            username: "(privát) " + username + " → " + target,
-            msg: message,
-            private: true
+        io.emit("message", {
+            username: "🔔",
+            msg: username + " belépett"
         });
 
-        document.getElementById("msg").value = "";
-        return;
-    }
-
-    socket.emit("message", {
-        username,
-        msg,
+        io.emit("users", Object.values(users));
     });
 
-    document.getElementById("msg").value = "";
-}
+    socket.on("message", (data) => {
+        io.emit("message", data);
+    });
 
-function addMessage(data) {
-    const div = document.createElement("div");
-    div.className = "msg";
+    socket.on("disconnect", () => {
+        const user = users[socket.id];
 
-    const time = document.createElement("span");
-    time.className = "time";
-    time.textContent = getTime() + " ";
+        if (user) {
+            io.emit("message", {
+                username: "🔔",
+                msg: user.name + " kilépett"
+            });
+        }
 
-    const name = document.createElement("span");
-    name.className = "name";
-    name.textContent = data.username + ": ";
+        delete users[socket.id];
+        io.emit("users", Object.values(users));
+    });
 
-    if(data.username === "admin") name.classList.add("admin");
-    if(data.private) name.classList.add("private");
-
-    const text = document.createElement("span");
-    text.innerHTML = parseEmoji(data.msg);
-
-    div.appendChild(time);
-    div.appendChild(name);
-    div.appendChild(text);
-
-    document.getElementById("messages").appendChild(div);
-
-    const box = document.getElementById("messages");
-    box.scrollTop = box.scrollHeight;
-}
-
-users[socket.id] = {
-    name: username,
-    admin: admins.includes(username)
-};
 });
-</script>
 
-</body>
-</html>
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log("Server fut: " + PORT);
+});
