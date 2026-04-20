@@ -2,46 +2,98 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Bázis Chat Admin</title>
+<title>Hodog Pro Chat</title>
 
 <style>
 body {
-    background: black;
-    color: #00ff00;
-    font-family: Courier New;
+    margin: 0;
+    font-family: Arial;
+    background: linear-gradient(135deg, #1e1e2f, #2a2a4a);
+    color: white;
 }
 
 #container {
     display: flex;
-    width: 800px;
-    margin: auto;
+    height: 100vh;
 }
 
+/* CHAT */
 #chat {
     flex: 3;
+    display: flex;
+    flex-direction: column;
+}
+
+#header {
+    padding: 15px;
+    background: linear-gradient(90deg, #ff0080, #7928ca);
+    font-size: 20px;
+    font-weight: bold;
 }
 
 #messages {
-    height: 300px;
-    overflow-y: auto;
-    border: 1px solid #00ff00;
-    margin: 10px 0;
-}
-
-#panel {
     flex: 1;
-    border-left: 1px solid #00ff00;
-    padding-left: 10px;
+    overflow-y: auto;
+    padding: 15px;
 }
 
-input, button {
-    background: black;
-    color: #00ff00;
-    border: 1px solid #00ff00;
-    margin: 2px;
+/* ÜZENET */
+.msg {
+    margin: 8px 0;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
 }
 
-.admin { color: red; }
+.admin {
+    color: #ff4d4d;
+    font-weight: bold;
+}
+
+.time {
+    font-size: 10px;
+    color: #aaa;
+}
+
+/* INPUT */
+#inputBox {
+    display: flex;
+    padding: 10px;
+    background: #111;
+}
+
+input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    margin-right: 5px;
+}
+
+button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: #ff0080;
+    color: white;
+    cursor: pointer;
+}
+
+/* USER LIST */
+#users {
+    flex: 1;
+    background: #111;
+    padding: 10px;
+}
+
+.user {
+    padding: 5px;
+    border-bottom: 1px solid #333;
+}
+
+.adminUser {
+    color: #ff4d4d;
+}
 </style>
 </head>
 
@@ -50,31 +102,26 @@ input, button {
 <div id="container">
 
 <div id="chat">
-<b>Bázis Chat</b><br>
 
-<input id="username">
-<button onclick="join()">Belép</button>
+<div id="header">🔥 Hodog Pro Chat</div>
+
+<div>
+<input id="username" placeholder="Név">
+<button onclick="join()">Belépés</button>
+</div>
 
 <div id="messages"></div>
 
-<input id="msg">
+<div id="inputBox">
+<input id="msg" placeholder="Írj valamit...">
 <button onclick="send()">Küld</button>
 </div>
 
-<div id="panel">
-<b>Admin Panel</b><br>
+</div>
 
-<select id="userSelect"></select><br>
-
-<button onclick="kick()">Kick</button>
-<button onclick="ban()">Ban</button>
-<button onclick="clearChat()">Clear</button>
-
-<hr>
-
-<b>Online:</b>
-<ul id="users"></ul>
-
+<div id="users">
+<b>Online</b>
+<div id="userList"></div>
 </div>
 
 </div>
@@ -92,64 +139,52 @@ function join() {
 
 function send() {
     let msg = document.getElementById("msg").value;
+    if (!msg) return;
+
     socket.emit("message", { username, msg });
     document.getElementById("msg").value = "";
 }
 
-function kick() {
-    let u = document.getElementById("userSelect").value;
-    socket.emit("message", { msg: "/kick " + u });
-}
-
-function ban() {
-    let u = document.getElementById("userSelect").value;
-    socket.emit("message", { msg: "/ban " + u });
-}
-
-function clearChat() {
-    socket.emit("message", { msg: "/clear" });
-}
-
 function addMessage(data) {
-    let div = document.createElement("div");
+    const div = document.createElement("div");
+    div.className = "msg";
 
-    let name = document.createElement("span");
-
+    let name = data.username;
     if (data.username === "roncsika38") {
-        name.className = "admin";
+        name = "👑 " + name;
     }
 
-    name.textContent = "[" + data.time + "] " + data.username + ": ";
-
-    let text = document.createElement("span");
-    text.textContent = data.msg;
-
-    div.appendChild(name);
-    div.appendChild(text);
+    div.innerHTML = `
+        <span class="time">[${data.time}]</span>
+        <b class="${data.username === 'roncsika38' ? 'admin' : ''}">
+            ${name}
+        </b>: ${data.msg}
+    `;
 
     document.getElementById("messages").appendChild(div);
+    document.getElementById("messages").scrollTop = 999999;
 }
 
 socket.on("message", addMessage);
 
 socket.on("chatHistory", msgs => msgs.forEach(addMessage));
 
-socket.on("users", (users) => {
-    let list = document.getElementById("users");
-    let select = document.getElementById("userSelect");
-
+socket.on("users", users => {
+    const list = document.getElementById("userList");
     list.innerHTML = "";
-    select.innerHTML = "";
 
     users.forEach(u => {
-        let li = document.createElement("li");
-        li.textContent = u;
-        list.appendChild(li);
+        let div = document.createElement("div");
+        div.className = "user";
 
-        let opt = document.createElement("option");
-        opt.value = u;
-        opt.textContent = u;
-        select.appendChild(opt);
+        if (u === "roncsika38") {
+            div.classList.add("adminUser");
+            div.textContent = "👑 " + u;
+        } else {
+            div.textContent = "🟢 " + u;
+        }
+
+        list.appendChild(div);
     });
 });
 
@@ -161,10 +196,6 @@ socket.on("kicked", () => {
 socket.on("banned", () => {
     alert("Kitiltva!");
     location.reload();
-});
-
-socket.on("clearChat", () => {
-    document.getElementById("messages").innerHTML = "";
 });
 
 </script>
