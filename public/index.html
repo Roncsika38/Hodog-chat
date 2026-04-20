@@ -1,105 +1,53 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
-  <title>Hodog Chat</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-    }
+<meta charset="UTF-8">
+<title>Hodog Pro</title>
+<script src="/socket.io/socket.io.js"></script>
 
-    .center {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
+<style>
+body { margin:0; font-family:Arial; background:#0f172a; color:white; }
 
-    .box {
-      background: #1e293b;
-      padding: 30px;
-      border-radius: 10px;
-      width: 300px;
-    }
+.center { display:flex; justify-content:center; align-items:center; height:100vh; }
 
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 5px;
-    }
+.box { background:#1e293b; padding:30px; border-radius:10px; width:300px; }
 
-    button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      background: #22c55e;
-      border: none;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
+input { width:100%; padding:10px; margin-top:10px; border:none; border-radius:5px; }
 
-    #chat {
-      display: none;
-      height: 100vh;
-      display: flex;
-    }
+button { width:100%; padding:10px; margin-top:10px; background:#22c55e; border:none; color:white; border-radius:5px; cursor:pointer; }
 
-    #sidebar {
-      width: 200px;
-      background: #020617;
-      padding: 20px;
-    }
+#chat { display:none; height:100vh; }
 
-    #main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+#app { display:flex; height:100%; }
 
-    #messages {
-      flex: 1;
-      padding: 20px;
-      overflow-y: auto;
-    }
+#sidebar { width:220px; background:#020617; padding:20px; }
 
-    .msg {
-      margin-bottom: 10px;
-    }
+#main { flex:1; display:flex; flex-direction:column; }
 
-    .admin {
-      color: #f43f5e;
-    }
+#messages { flex:1; padding:20px; overflow-y:auto; }
 
-    #inputBox {
-      display: flex;
-      padding: 10px;
-      background: #1e293b;
-    }
+.msg { margin-bottom:10px; }
 
-    #inputBox input {
-      flex: 1;
-      margin: 0;
-    }
+.admin { color:#f43f5e; }
 
-    #inputBox button {
-      width: 100px;
-      margin-left: 10px;
-    }
-  </style>
+.delete { color:red; cursor:pointer; margin-left:10px; }
+
+#inputBox { display:flex; padding:10px; background:#1e293b; }
+
+#inputBox input { flex:1; }
+
+#inputBox button { width:100px; margin-left:10px; }
+
+.user { margin-bottom:5px; }
+</style>
 </head>
+
 <body>
 
 <div id="auth" class="center">
   <div class="box">
-    <h2>Bejelentkezés</h2>
-    <input id="user" placeholder="Felhasználónév">
+    <h2>Login</h2>
+    <input id="user" placeholder="Felhasználó">
     <input id="pass" type="password" placeholder="Jelszó">
     <button onclick="login()">Belépés</button>
     <button onclick="register()">Regisztráció</button>
@@ -107,92 +55,100 @@
 </div>
 
 <div id="chat">
-  <div id="sidebar">
-    <h3>Online</h3>
-    <div id="users"></div>
-  </div>
+  <div id="app">
+    <div id="sidebar">
+      <h3>🟢 Online</h3>
+      <div id="users"></div>
+    </div>
 
-  <div id="main">
-    <div id="messages"></div>
+    <div id="main">
+      <div id="messages"></div>
 
-    <div id="inputBox">
-      <input id="msgInput" placeholder="Írj üzenetet...">
-      <button onclick="send()">Küld</button>
+      <div id="inputBox">
+        <input id="msgInput" placeholder="Írj...">
+        <button onclick="send()">Küld</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 let socket;
-let username = "";
-let role = "";
+let userData;
 
 async function register() {
-  const u = user.value;
-  const p = pass.value;
-
   await fetch("/register", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username: u, password: p })
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ username:user.value, password:pass.value })
   });
-
-  alert("Regisztrálva!");
+  alert("Kész");
 }
 
 async function login() {
-  const u = user.value;
-  const p = pass.value;
-
   const res = await fetch("/login", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username: u, password: p })
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ username:user.value, password:pass.value })
   });
 
   const data = await res.json();
+  if (!data.success) return alert("Hiba");
 
-  if (!data.success) return alert("Hibás adatok");
-
-  username = data.user.username;
-  role = data.user.role;
-
-  startChat();
+  userData = data.user;
+  start();
 }
 
-function startChat() {
-  document.getElementById("auth").style.display = "none";
-  document.getElementById("chat").style.display = "flex";
+function start() {
+  auth.style.display="none";
+  chat.style.display="block";
 
   socket = io();
+  socket.emit("join", userData);
 
-  socket.emit("join", username);
-
-  socket.on("loadMessages", msgs => {
-    msgs.forEach(addMsg);
-  });
+  socket.on("loadMessages", msgs => msgs.forEach(addMsg));
 
   socket.on("message", addMsg);
+
+  socket.on("online", list => {
+    users.innerHTML="";
+    list.forEach(u=>{
+      users.innerHTML += `<div class="user">${u.username}</div>`;
+    });
+  });
+
+  socket.on("deleteMsg", id=>{
+    document.getElementById(id)?.remove();
+  });
 }
 
 function send() {
-  const msg = msgInput.value;
-  socket.emit("message", msg);
-  msgInput.value = "";
+  socket.emit("message", msgInput.value);
+  msgInput.value="";
 }
 
 function addMsg(m) {
   const div = document.createElement("div");
-  div.className = "msg";
+  div.className="msg";
+  div.id = m._id;
+
+  let del = "";
+  if (userData.role === "admin") {
+    del = `<span class="delete" onclick="delMsg('${m._id}')">❌</span>`;
+  }
 
   if (m.username === "roncsika38") {
-    div.innerHTML = `<b class="admin">[ADMIN] ${m.username}</b>: ${m.msg}`;
+    div.innerHTML = `<b class="admin">[ADMIN] ${m.username}</b>: ${m.msg} ${del}`;
   } else {
-    div.innerHTML = `<b>${m.username}</b>: ${m.msg}`;
+    div.innerHTML = `<b>${m.username}</b>: ${m.msg} ${del}`;
   }
 
   messages.appendChild(div);
   messages.scrollTop = messages.scrollHeight;
+}
+
+function delMsg(id) {
+  socket.emit("deleteMsg", id);
 }
 </script>
 
