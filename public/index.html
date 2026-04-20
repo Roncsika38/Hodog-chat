@@ -2,13 +2,13 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<title>HODOG PRO CHAT</title>
+<title>Hodog Modern Chat</title>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial;
-    background: linear-gradient(120deg, #4facfe, #00f2fe);
+    font-family: 'Segoe UI';
+    background: #f0f2f5;
 }
 
 #app {
@@ -16,94 +16,117 @@ body {
     height: 100vh;
 }
 
+/* SIDEBAR */
+#sidebar {
+    width: 260px;
+    background: #2f3136;
+    color: white;
+    padding: 15px;
+}
+
+#sidebar h2 {
+    margin-top: 0;
+}
+
 /* CHAT */
 #chat {
-    flex: 3;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    background: white;
-    padding: 10px;
 }
 
 #messages {
     flex: 1;
     overflow-y: auto;
-    border: 1px solid #ccc;
-    padding: 10px;
+    padding: 15px;
 }
 
 .msg {
+    background: white;
+    padding: 10px;
     margin-bottom: 8px;
+    border-radius: 10px;
 }
 
 .admin {
-    color: red;
-    font-weight: bold;
+    border-left: 4px solid red;
 }
 
-.time {
-    font-size: 10px;
-    color: gray;
-}
-
-/* OLDALSÁV */
-#sidebar {
-    flex: 1;
-    background: #222;
-    color: white;
-    padding: 10px;
-}
-
-#sidebar h3 {
-    color: #00f2fe;
-}
-
-/* INPUT */
-#inputBox {
+#input {
     display: flex;
-    margin-top: 10px;
+    padding: 10px;
+    background: white;
 }
 
-#inputBox input {
+#input input {
     flex: 1;
     padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
 }
 
 button {
+    margin-left: 5px;
     padding: 10px;
-    background: #00f2fe;
     border: none;
+    background: #5865F2;
+    color: white;
+    border-radius: 8px;
     cursor: pointer;
+}
+
+/* LOGIN */
+#login {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#loginBox {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
 }
 </style>
 </head>
 
 <body>
 
+<div id="login">
+    <div id="loginBox">
+        <h2>Belépés / Regisztráció</h2>
+        <input id="name" placeholder="Felhasználónév"><br><br>
+        <button onclick="login()">Belépés</button>
+    </div>
+</div>
+
 <div id="app">
 
-    <div id="chat">
-        <h2>🔥 HODOG PRO CHAT 🔥</h2>
-
-        <input id="username" placeholder="Neved...">
-        <button onclick="join()">Belépés</button>
-
-        <div id="messages"></div>
-
-        <div id="inputBox">
-            <input id="msg" placeholder="Írj..." onkeypress="handleKey(event)">
-            <button onclick="send()">Küld</button>
-        </div>
-    </div>
-
     <div id="sidebar">
+        <h2>💬 Hodog Chat</h2>
+        <p id="me"></p>
+
         <h3>Online</h3>
-        <ul id="userList"></ul>
+        <ul id="users"></ul>
 
         <hr>
 
-        <h3>Admin panel</h3>
+        <h3>Admin</h3>
         <button onclick="clearChat()">Chat törlés</button>
+    </div>
+
+    <div id="chat">
+        <div id="messages"></div>
+
+        <div id="input">
+            <input id="msg" placeholder="Írj..." onkeypress="key(event)">
+            <button onclick="send()">Küld</button>
+        </div>
     </div>
 
 </div>
@@ -113,18 +136,34 @@ button {
 const socket = io();
 let username = "";
 
-/* BELÉPÉS */
-function join() {
-    username = document.getElementById("username").value;
+/* LOGIN */
+function login() {
+    username = document.getElementById("name").value;
+    if (!username) return;
+
+    localStorage.setItem("user", username);
+
+    document.getElementById("login").style.display = "none";
+    document.getElementById("me").innerText = "Te: " + username;
+
     socket.emit("join", username);
 }
 
-/* ENTER KÜLDÉS */
-function handleKey(e) {
+/* AUTO LOGIN */
+window.onload = () => {
+    let saved = localStorage.getItem("user");
+    if (saved) {
+        document.getElementById("name").value = saved;
+        login();
+    }
+};
+
+/* ENTER */
+function key(e) {
     if (e.key === "Enter") send();
 }
 
-/* ÜZENET KÜLDÉS */
+/* SEND */
 function send() {
     let msg = document.getElementById("msg").value;
     if (!msg) return;
@@ -133,42 +172,35 @@ function send() {
     document.getElementById("msg").value = "";
 }
 
-/* ADMIN CLEAR */
+/* ADMIN */
 function clearChat() {
     socket.emit("clear");
 }
 
-/* ÜZENET MEGJELENÍTÉS */
-socket.on("message", (data) => {
+/* RECEIVE */
+socket.on("message", (d) => {
     let div = document.createElement("div");
-    div.classList.add("msg");
+    div.className = "msg";
 
-    if (data.role === "admin") div.classList.add("admin");
+    if (d.role === "admin") div.classList.add("admin");
 
-    div.innerHTML = `
-        <span class="time">[${data.time}]</span>
-        <b>${data.username}</b>: ${data.msg}
-    `;
-
+    div.innerHTML = `<b>${d.username}</b>: ${d.msg}`;
     document.getElementById("messages").appendChild(div);
-
-    let box = document.getElementById("messages");
-    box.scrollTop = box.scrollHeight;
 });
 
-/* USER LIST */
-socket.on("users", (users) => {
-    let list = document.getElementById("userList");
-    list.innerHTML = "";
+/* USERS */
+socket.on("users", (u) => {
+    let ul = document.getElementById("users");
+    ul.innerHTML = "";
 
-    users.forEach(u => {
+    u.forEach(x => {
         let li = document.createElement("li");
-        li.textContent = u.name + (u.role === "admin" ? " 👑" : "");
-        list.appendChild(li);
+        li.textContent = x.name + (x.role === "admin" ? " 👑" : "");
+        ul.appendChild(li);
     });
 });
 
-/* CHAT CLEAR */
+/* CLEAR */
 socket.on("clear", () => {
     document.getElementById("messages").innerHTML = "";
 });
