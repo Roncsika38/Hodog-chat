@@ -84,7 +84,7 @@ button {
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-let username = "";
+let users = {};
 
 // ENTER küldés
 document.getElementById("msg").addEventListener("keypress", function(e){
@@ -175,19 +175,10 @@ function addMessage(data) {
     box.scrollTop = box.scrollHeight;
 }
 
-socket.on("message", (data) => {
-    addMessage(data);
-});
-
-socket.on("users", (users) => {
-    const list = document.getElementById("userList");
-    list.innerHTML = "";
-
-    users.forEach(u => {
-        const li = document.createElement("li");
-        li.textContent = u;
-        list.appendChild(li);
-    });
+users[socket.id] = {
+    name: username,
+    admin: admins.includes(username)
+};
 });
 </script>
 
