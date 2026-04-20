@@ -1,43 +1,83 @@
-<!DOCTYPE html>
-<html lang="hu">
-<head>
-  <meta charset="UTF-8">
-  <title>🔥 PRO CHAT</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const mongoose = require("mongoose");
+const cors = require("cors");
 
-<!-- LOGIN -->
-<div id="auth">
-  <h1>🔥 PRO CHAT</h1>
-  <input id="username" placeholder="Felhasználó">
-  <input id="password" type="password" placeholder="Jelszó">
-  <button onclick="login()">Belépés</button>
-  <button onclick="register()">Regisztráció</button>
-</div>
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-<!-- CHAT -->
-<div id="chat" style="display:none;">
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
 
-  <!-- BAL OLDAL -->
-  <div class="sidebar">
-    <h3>👥 Userek</h3>
-    <ul id="usersList"></ul>
-  </div>
+// 🔥 MONGODB CONNECT (EZT HASZNÁLD!)
+mongoose.connect("mongodb+srv://roncsika635:JELSZOD@cluster0.1t1l5jo.mongodb.net/chat")
+.then(() => console.log("✅ MongoDB connected"))
+.catch(err => console.log(err));
 
-  <!-- JOBB OLDAL -->
-  <div class="main">
-    <div id="messages"></div>
+// USER MODEL
+const User = mongoose.model("User", {
+  username: String,
+  password: String,
+  role: String
+});
 
-    <div class="input">
-      <input id="msgInput" placeholder="Írj üzenetet...">
-      <button onclick="send()">Küldés</button>
-    </div>
-  </div>
+// MESSAGE MODEL
+const Message = mongoose.model("Message", {
+  username: String,
+  msg: String,
+  time: String
+});
 
-</div>
+// REGISTER
+app.post("/register", async (req, res) => {
+  const { username, password } = req.body;
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
-</body>
-</html>
+  const exists = await User.findOne({ username });
+  if (exists) return res.json({ error: "Már létezik" });
+
+  const role = username === "Predator" ? "admin" : "user";
+
+  await User.create({ username, password, role });
+
+  res.json({ success: true });
+});
+
+// LOGIN
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  const user = await User.findOne({ username, password });
+  if (!user) return res.json({ error: "Hibás adat" });
+
+  res.json({ success: true, user });
+});
+
+// SOCKET
+io.on("connection", (socket) => {
+
+  socket.on("join", async (username) => {
+    socket.username = username;
+
+    const messages = await Message.find().limit(50);
+    socket.emit("loadMessages", messages);
+  });
+
+  socket.on("message", async (msg) => {
+    const data = {
+      username: socket.username,
+      msg,
+      time: new Date().toLocaleTimeString()
+    };
+
+    await Message.create(data);
+    io.emit("message", data);
+  });
+
+});
+
+server.listen(process.env.PORT || 3000, () => {
+  console.log("🔥 Server fut");
+});
