@@ -8,28 +8,48 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-let users = [];
+let users = {};
+let admins = ["roncsika38"]; // 👑 ide írd a neved
 
 io.on("connection", (socket) => {
 
-  socket.on("join", (username) => {
-    socket.username = username;
-    users.push(username);
-    io.emit("users", users);
-  });
+    socket.on("join", (username) => {
+        socket.username = username;
 
-  socket.on("message", (data) => {
-    io.emit("message", data);
-  });
+        users[socket.id] = {
+            name: username,
+            admin: admins.includes(username)
+        };
 
-  socket.on("disconnect", () => {
-    users = users.filter(u => u !== socket.username);
-    io.emit("users", users);
-  });
+        io.emit("message", {
+            username: "🔔",
+            msg: username + " belépett"
+        });
+
+        io.emit("users", Object.values(users));
+    });
+
+    socket.on("message", (data) => {
+        io.emit("message", data);
+    });
+
+    socket.on("disconnect", () => {
+        const user = users[socket.id];
+
+        if (user) {
+            io.emit("message", {
+                username: "🔔",
+                msg: user.name + " kilépett"
+            });
+        }
+
+        delete users[socket.id];
+        io.emit("users", Object.values(users));
+    });
 
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
+    console.log("Server fut: " + PORT);
 });
