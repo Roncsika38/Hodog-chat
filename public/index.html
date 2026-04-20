@@ -2,17 +2,16 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<title>Hodog Chat PRO+</title>
+<title>Hodog Ultimate Chat</title>
 
 <style>
 body {
     margin: 0;
     font-family: Arial;
-    background: linear-gradient(135deg, #141e30, #243b55);
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
     color: white;
 }
 
-/* FŐ KONTAINER */
 #container {
     display: flex;
     height: 100vh;
@@ -23,7 +22,6 @@ body {
     flex: 3;
     display: flex;
     flex-direction: column;
-    border-right: 2px solid #444;
 }
 
 #messages {
@@ -33,21 +31,12 @@ body {
 }
 
 .msg {
-    margin: 5px 0;
+    margin: 6px 0;
 }
 
 .time {
     font-size: 10px;
     color: #aaa;
-}
-
-/* OLDALSÁV (EZ HIÁNYZOTT!) */
-#side {
-    flex: 1;
-    min-width: 250px;
-    background: #111;
-    padding: 10px;
-    overflow-y: auto;
 }
 
 /* INPUT */
@@ -57,15 +46,36 @@ body {
     background: #000;
 }
 
-input, button {
-    margin: 3px;
-    padding: 6px;
+input {
+    flex: 1;
+    padding: 8px;
+}
+
+button {
+    padding: 8px;
+    cursor: pointer;
+}
+
+/* OLDAL */
+#side {
+    flex: 1;
+    background: #111;
+    padding: 10px;
+    overflow-y: auto;
 }
 
 /* ADMIN */
 .admin {
     color: red;
     font-weight: bold;
+}
+
+.userItem {
+    cursor: pointer;
+    padding: 3px;
+}
+.userItem:hover {
+    background: #333;
 }
 </style>
 </head>
@@ -74,37 +84,44 @@ input, button {
 
 <div id="container">
 
-<!-- CHAT -->
 <div id="chat">
 
-<h2>🔥 HODOG PRO+ 🔥</h2>
+<h2>🔥 HODOG ULTIMATE 🔥</h2>
 
 <div id="messages"></div>
 
 <div id="inputBox">
-<input id="msg" placeholder="Írj...">
+<input id="msg" placeholder="Írj..." onkeypress="handleKey(event)">
 <button onclick="send()">Küld</button>
 </div>
 
 </div>
 
-<!-- OLDALSÁV -->
 <div id="side">
 
 <h3>⚙️ Beállítás</h3>
 
-<label>Név:</label><br>
-<input id="nameInput"><br>
-
-<label>Szín:</label><br>
+<input id="nameInput" placeholder="Név"><br>
 <input type="color" id="colorInput"><br>
-
 <button onclick="saveSettings()">Mentés</button>
 
 <hr>
 
 <h3>👥 Online</h3>
 <ul id="users"></ul>
+
+<hr>
+
+<div id="adminPanel" style="display:none">
+<h3>👑 Admin Panel</h3>
+
+Kiválasztott:
+<div id="selectedUser">-</div>
+
+<button onclick="kick()">Kick</button>
+<button onclick="ban()">Ban</button>
+<button onclick="clearChat()">Clear Chat</button>
+</div>
 
 <hr>
 
@@ -121,20 +138,26 @@ const socket = io();
 
 let username = localStorage.getItem("name") || "";
 let color = localStorage.getItem("color") || "#00ffcc";
+let selectedUser = "";
+
+/* ENTER KÜLDÉS */
+function handleKey(e){
+    if(e.key === "Enter") send();
+}
 
 /* BETÖLTÉS */
 window.onload = () => {
     document.getElementById("nameInput").value = username;
     document.getElementById("colorInput").value = color;
 
-    if (username) {
+    if(username){
         socket.emit("join", username);
         updateMe();
     }
 };
 
 /* MENTÉS */
-function saveSettings() {
+function saveSettings(){
     username = document.getElementById("nameInput").value;
     color = document.getElementById("colorInput").value;
 
@@ -145,23 +168,24 @@ function saveSettings() {
     updateMe();
 }
 
-/* SAJÁT INFO */
-function updateMe() {
+/* PROFIL */
+function updateMe(){
     const me = document.getElementById("me");
 
-    if (username === "roncsika38") {
-        me.innerHTML = "👑 ADMIN: " + username;
+    if(username === "roncsika38"){
+        me.innerHTML = "👑 ADMIN";
         me.style.color = "red";
+        document.getElementById("adminPanel").style.display = "block";
     } else {
-        me.innerHTML = "👤 " + username;
+        me.innerHTML = "👤 USER";
         me.style.color = color;
     }
 }
 
-/* KÜLDÉS */
-function send() {
+/* ÜZENET */
+function send(){
     let msg = document.getElementById("msg").value;
-    if (!msg) return;
+    if(!msg) return;
 
     socket.emit("message", {
         username,
@@ -169,51 +193,66 @@ function send() {
         color
     });
 
-    document.getElementById("msg").value = "";
+    document.getElementById("msg").value="";
 }
 
-/* ÜZENET */
-socket.on("message", (data) => {
-    const div = document.createElement("div");
-    div.className = "msg";
+/* CHAT */
+socket.on("message", (data)=>{
+    const div=document.createElement("div");
+    div.className="msg";
 
-    let nameStyle = `color:${data.color || "#fff"}`;
+    let nameStyle=`color:${data.color || "#fff"}`;
 
-    if (data.username === "roncsika38") {
-        nameStyle = "color:red; font-weight:bold;";
+    if(data.username==="roncsika38"){
+        nameStyle="color:red;font-weight:bold;";
     }
 
-    div.innerHTML = `
-        <span class="time">[${data.time}]</span>
-        <span style="${nameStyle}">
-            ${data.username}:
-        </span>
-        ${data.msg}
-    `;
+    div.innerHTML=`
+    <span class="time">[${data.time}]</span>
+    <span style="${nameStyle}">${data.username}:</span>
+    ${data.msg}`;
 
-    document.getElementById("messages").appendChild(div);
-
-    document.getElementById("messages").scrollTop = 999999;
+    messages.appendChild(div);
+    messages.scrollTop=999999;
 });
 
 /* USER LIST */
-socket.on("users", (users) => {
-    const list = document.getElementById("users");
-    list.innerHTML = "";
+socket.on("users",(users)=>{
+    const list=document.getElementById("users");
+    list.innerHTML="";
 
-    users.forEach(u => {
-        let li = document.createElement("li");
+    users.forEach(u=>{
+        let li=document.createElement("li");
+        li.className="userItem";
 
-        if (u === "roncsika38") {
-            li.innerHTML = "👑 " + u;
-            li.style.color = "red";
+        if(u==="roncsika38"){
+            li.innerHTML="👑 "+u;
+            li.style.color="red";
         } else {
-            li.textContent = u;
+            li.textContent=u;
         }
+
+        li.onclick=()=>{
+            selectedUser=u;
+            document.getElementById("selectedUser").innerText=u;
+        };
 
         list.appendChild(li);
     });
 });
+
+/* ADMIN FUNKCIÓK */
+function kick(){
+    socket.emit("message",{msg:"/kick "+selectedUser});
+}
+
+function ban(){
+    socket.emit("message",{msg:"/ban "+selectedUser});
+}
+
+function clearChat(){
+    socket.emit("message",{msg:"/clear"});
+}
 
 </script>
 
