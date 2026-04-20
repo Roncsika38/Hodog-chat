@@ -1,34 +1,60 @@
 <!DOCTYPE html>
-<html>
+<html lang="hu">
 <head>
-<meta charset="UTF-8">
-<title>Chat</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Hodog Chat PRO</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Socket -->
+  <script src="/socket.io/socket.io.js"></script>
 </head>
+
 <body>
 
-<div id="login">
-  <input id="name" placeholder="Neved">
-  <button onclick="join()">Belépés</button>
+<!-- ===== LOGIN ===== -->
+<div id="login" style="display:flex; justify-content:center; align-items:center; height:100vh;">
+  <div style="background:#1e293b; padding:30px; border-radius:10px;">
+    <h2 style="color:white;">Belépés</h2>
+    
+    <input id="name" placeholder="Neved" style="padding:10px; width:200px;"><br><br>
+    
+    <button onclick="join()" style="padding:10px; width:100%;">Belépés</button>
+  </div>
 </div>
 
-<div id="chat" style="display:none;">
-  <div id="sidebar">
-    <h3>Users</h3>
-    <div id="users"></div>
-  </div>
+<!-- ===== CHAT ===== -->
+<div id="chat" style="display:none; height:100vh;">
 
-  <div id="main">
-    <div id="messages"></div>
+  <div style="display:flex; height:100%;">
 
-    <div id="input">
-      <input id="msg">
-      <button onclick="send()">Küld</button>
+    <!-- SIDEBAR -->
+    <div style="width:200px; background:#020617; color:white; padding:10px;">
+      <h3>Users</h3>
+      <div id="users"></div>
     </div>
+
+    <!-- MAIN -->
+    <div style="flex:1; display:flex; flex-direction:column;">
+
+      <!-- MESSAGES -->
+      <div id="messages" style="flex:1; padding:10px; overflow-y:auto;"></div>
+
+      <!-- INPUT -->
+      <div style="display:flex;">
+        <input id="msg" placeholder="Írj..." style="flex:1; padding:10px;">
+        <button onclick="send()" style="padding:10px;">Küld</button>
+      </div>
+
+    </div>
+
   </div>
+
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
+<!-- JS -->
 <script src="app.js"></script>
+
 </body>
 </html>
