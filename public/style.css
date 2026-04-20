@@ -5,6 +5,24 @@ body {
   color: white;
 }
 
+/* LOGIN */
+#auth {
+  text-align: center;
+  margin-top: 100px;
+}
+
+input {
+  display: block;
+  margin: 10px auto;
+  padding: 10px;
+  width: 200px;
+}
+
+button {
+  padding: 10px;
+}
+
+/* CHAT */
 #chat {
   display: flex;
   height: 100vh;
@@ -22,27 +40,28 @@ body {
   margin-top: 0;
 }
 
+/* USER LIST */
+#usersList {
+  padding: 0;
+}
+
 #usersList li {
   list-style: none;
   margin: 10px 0;
-  padding: 5px;
+  padding: 10px;
   background: #1e293b;
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
 
 /* GOMBOK */
 #usersList button {
   margin-left: 5px;
-  cursor: pointer;
   border: none;
   padding: 5px;
   border-radius: 5px;
-}
-
-button {
   cursor: pointer;
 }
 
@@ -56,13 +75,14 @@ button {
 #messages {
   flex: 1;
   padding: 15px;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 .message {
-  margin: 5px 0;
+  margin: 8px 0;
 }
 
+/* INPUT */
 .input {
   display: flex;
   padding: 10px;
