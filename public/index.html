@@ -2,124 +2,77 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<title>Hodog Chat PRO</title>
+<title>Hodog Chat PRO+</title>
 
 <style>
 body {
     margin: 0;
     font-family: Arial;
-    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* CHAT KERET */
-#chat {
-    width: 900px;
-    height: 600px;
-    display: flex;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 0 30px black;
-}
-
-/* BAL OLDAL */
-#left {
-    flex: 3;
-    background: rgba(0,0,0,0.8);
+    background: linear-gradient(135deg, #141e30, #243b55);
     color: white;
+}
+
+#container {
+    display: flex;
+    height: 100vh;
+}
+
+/* CHAT */
+#chat {
+    flex: 3;
     display: flex;
     flex-direction: column;
 }
 
-/* JOBB OLDAL */
-#right {
-    flex: 1;
-    background: rgba(255,255,255,0.1);
-    color: white;
-    padding: 10px;
-    border-left: 2px solid #00ffcc;
-}
-
-/* HEADER */
-#header {
-    padding: 10px;
-    font-size: 20px;
-    text-align: center;
-    background: black;
-    color: gold;
-    font-weight: bold;
-    text-shadow: 0 0 10px orange;
-}
-
-/* MESSAGES */
 #messages {
     flex: 1;
-    padding: 10px;
     overflow-y: auto;
+    padding: 10px;
 }
 
 .msg {
     margin: 5px 0;
 }
 
-.admin {
-    color: red;
-    font-weight: bold;
+.time {
+    font-size: 10px;
+    color: #aaa;
 }
 
-.time {
-    color: gray;
-    font-size: 12px;
+/* JOBB PANEL */
+#side {
+    flex: 1;
+    background: #111;
+    padding: 10px;
 }
 
 /* INPUT */
 #inputBox {
     display: flex;
     padding: 10px;
-    background: black;
+    background: #000;
 }
 
-input {
+input, button, select {
+    margin: 3px;
     padding: 5px;
-    border: none;
-    margin-right: 5px;
 }
 
-button {
-    background: #00ffcc;
-    border: none;
-    padding: 5px 10px;
-    cursor: pointer;
-}
-
-/* USER LIST */
-#userList li {
-    color: #00ffcc;
-}
-
-/* LOGIN */
-#login {
-    padding: 10px;
-    background: black;
+/* ADMIN */
+.admin {
+    color: red;
+    font-weight: bold;
 }
 </style>
 </head>
 
 <body>
 
+<div id="container">
+
 <div id="chat">
 
-<div id="left">
-
-<div id="header">🔥 HODOG CHAT PRO 🔥</div>
-
-<div id="login">
-<input id="username" placeholder="Név">
-<button onclick="join()">Belépés</button>
-</div>
+<h2>🔥 HODOG PRO+ 🔥</h2>
 
 <div id="messages"></div>
 
@@ -130,77 +83,128 @@ button {
 
 </div>
 
-<div id="right">
-<h3>Online</h3>
-<ul id="userList"></ul>
+<div id="side">
+
+<h3>⚙️ Beállítás</h3>
+
+Név:<br>
+<input id="nameInput"><br>
+
+Szín:<br>
+<input type="color" id="colorInput"><br>
+
+<button onclick="saveSettings()">Mentés</button>
 
 <hr>
 
-<h3>Profil</h3>
-<div id="me">Nincs</div>
+<h3>👥 Online</h3>
+<ul id="users"></ul>
+
+<div id="me"></div>
+
 </div>
 
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+
 const socket = io();
 
-let username = "";
+let username = localStorage.getItem("name") || "";
+let color = localStorage.getItem("color") || "#00ffcc";
 
-/* BELÉPÉS */
-function join() {
-    username = document.getElementById("username").value;
-    if (!username) return;
+/* BETÖLTÉS */
+window.onload = () => {
+    document.getElementById("nameInput").value = username;
+    document.getElementById("colorInput").value = color;
+
+    if (username) {
+        socket.emit("join", username);
+        updateMe();
+    }
+};
+
+/* MENTÉS */
+function saveSettings() {
+    username = document.getElementById("nameInput").value;
+    color = document.getElementById("colorInput").value;
+
+    localStorage.setItem("name", username);
+    localStorage.setItem("color", color);
 
     socket.emit("join", username);
-
-    document.getElementById("me").innerHTML =
-        username === "admin"
-        ? "👑 ADMIN: " + username
-        : "👤 " + username;
+    updateMe();
 }
 
-/* ÜZENET */
+/* SAJÁT INFO */
+function updateMe() {
+    const me = document.getElementById("me");
+
+    if (username === "roncsika38") {
+        me.innerHTML = "👑 ADMIN: " + username;
+        me.style.color = "red";
+    } else {
+        me.innerHTML = "👤 " + username;
+        me.style.color = color;
+    }
+}
+
+/* KÜLDÉS */
 function send() {
     let msg = document.getElementById("msg").value;
     if (!msg) return;
 
     socket.emit("message", {
         username,
-        msg
+        msg,
+        color
     });
 
     document.getElementById("msg").value = "";
 }
 
-/* ÜZENET MEGJELENÍTÉS */
+/* ÜZENET */
 socket.on("message", (data) => {
     const div = document.createElement("div");
     div.className = "msg";
 
-    let time = new Date().toLocaleTimeString();
+    let nameStyle = `color:${data.color || "#fff"}`;
 
-    div.innerHTML =
-        `<span class="time">[${time}]</span> ` +
-        `<span class="${data.username === 'admin' ? 'admin' : ''}">
-        ${data.username}:
-        </span> ${data.msg}`;
+    if (data.username === "roncsika38") {
+        nameStyle = "color:red; font-weight:bold;";
+    }
+
+    div.innerHTML = `
+        <span class="time">[${data.time}]</span>
+        <span style="${nameStyle}">
+            ${data.username}:
+        </span>
+        ${data.msg}
+    `;
 
     document.getElementById("messages").appendChild(div);
 });
 
 /* USER LIST */
 socket.on("users", (users) => {
-    const list = document.getElementById("userList");
+    const list = document.getElementById("users");
     list.innerHTML = "";
 
     users.forEach(u => {
-        const li = document.createElement("li");
-        li.textContent = u === "admin" ? "👑 " + u : u;
+        let li = document.createElement("li");
+
+        if (u === "roncsika38") {
+            li.innerHTML = "👑 " + u;
+            li.style.color = "red";
+        } else {
+            li.textContent = u;
+        }
+
         list.appendChild(li);
     });
 });
+
 </script>
 
 </body>
