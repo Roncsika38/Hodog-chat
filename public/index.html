@@ -6,39 +6,69 @@
 
 <style>
 body {
-    display: flex;
-    justify-content: center;
     background: black;
     color: lime;
     font-family: monospace;
 }
 
-#chat {
-    width: 600px;
+#container {
+    display: flex;
+    width: 900px;
+    margin: 50px auto;
     border: 2px solid lime;
+}
+
+/* CHAT */
+#chatBox {
+    flex: 3;
+    border-right: 2px solid lime;
     padding: 10px;
 }
 
 #messages {
     height: 300px;
-    overflow-y: scroll;
+    overflow-y: auto;
     border: 1px solid lime;
-    margin: 10px 0;
     padding: 5px;
+    margin: 10px 0;
 }
 
-#sidebar {
-    width: 200px;
-    margin-left: 20px;
-    border: 2px solid lime;
+/* USER LISTA */
+#usersBox {
+    flex: 1;
     padding: 10px;
 }
-</style>
 
+/* INPUT */
+input, button {
+    background: black;
+    color: lime;
+    border: 1px solid lime;
+}
+
+/* ADMIN */
+.admin {
+    color: red;
+    font-weight: bold;
+}
+
+/* PRIVÁT */
+.private {
+    color: orange;
+}
+
+.time {
+    color: gray;
+    font-size: 10px;
+}
+</style>
 </head>
+
 <body>
 
-<div id="chat">
+<div id="container">
+
+<div id="chatBox">
     <h2>🔥 HODOG CHAT 🔥</h2>
 
     <input id="username" placeholder="Név">
@@ -46,61 +76,115 @@ body {
 
     <div id="messages"></div>
 
-    <input id="msg" placeholder="Írj valamit...">
+    <input id="msg" placeholder="Írj...">
     <button onclick="send()">Küld</button>
 </div>
 
-<div id="sidebar">
-    <h3>👥 Online</h3>
+<div id="usersBox">
+    <h3>Online</h3>
     <ul id="userList"></ul>
+</div>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+
 const socket = io();
 let username = "";
 
+/* BELÉPÉS */
 function join() {
     username = document.getElementById("username").value;
     socket.emit("join", username);
 }
 
+/* KÜLDÉS */
 function send() {
-    const msg = document.getElementById("msg").value;
+    let msg = document.getElementById("msg").value;
     if (!msg) return;
 
-    socket.emit("message", { username, msg });
+    // PRIVÁT ÜZENET
+    if (msg.startsWith("/w ")) {
+        const parts = msg.split(" ");
+        const target = parts[1];
+        const message = parts.slice(2).join(" ");
+
+        addMessage({
+            username: "(privát) " + username + " → " + target,
+            msg: message,
+            private: true
+        });
+
+        document.getElementById("msg").value = "";
+        return;
+    }
+
+    socket.emit("message", {
+        username,
+        msg
+    });
+
     document.getElementById("msg").value = "";
 }
 
-socket.on("message", (data) => {
+/* ÜZENET MEGJELENÍTÉS */
+function addMessage(data) {
     const div = document.createElement("div");
 
-    div.innerHTML = "<b>" + data.username + ":</b> " + data.msg;
+    const time = document.createElement("span");
+    time.classList.add("time");
+    time.textContent = "[" + new Date().toLocaleTimeString() + "] ";
+
+    const name = document.createElement("span");
+    name.textContent = data.username + ": ";
+
+    if (data.username === "admin") {
+        name.classList.add("admin");
+    }
+
+    if (data.private) {
+        name.classList.add("private");
+    }
+
+    const text = document.createElement("span");
+    text.textContent = data.msg;
+
+    div.appendChild(time);
+    div.appendChild(name);
+    div.appendChild(text);
 
     document.getElementById("messages").appendChild(div);
 
+    // AUTO SCROLL
     const box = document.getElementById("messages");
     box.scrollTop = box.scrollHeight;
+}
+
+/* SOCKET */
+socket.on("message", (data) => {
+    addMessage(data);
 });
 
+/* USER LISTA */
 socket.on("users", (users) => {
     const list = document.getElementById("userList");
     list.innerHTML = "";
 
-    users.forEach((u) => {
+    users.forEach(u => {
         const li = document.createElement("li");
 
-        if (u.admin) {
-            li.innerHTML = "👑 " + u.name;
+        if (u === "admin") {
+            li.innerHTML = "👑 " + u;
             li.style.color = "red";
         } else {
-            li.textContent = u.name;
+            li.textContent = u;
         }
 
         list.appendChild(li);
     });
 });
+
 </script>
 
 </body>
