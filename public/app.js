@@ -1,15 +1,16 @@
 const socket = io();
+
 let currentUser = null;
 let selectedUser = null;
 
 function login() {
-  const username = usernameInput.value;
-  const password = passwordInput.value;
-
   fetch("/login", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({
+      username: username.value,
+      password: password.value
+    })
   })
   .then(res => res.json())
   .then(data => {
@@ -27,8 +28,8 @@ function register() {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
-      username: usernameInput.value,
-      password: passwordInput.value
+      username: username.value,
+      password: password.value
     })
   }).then(() => alert("Regisztrálva!"));
 }
@@ -41,49 +42,78 @@ function startChat() {
 }
 
 function send() {
-  const msg = msgInput.value;
-
   socket.emit("message", {
-    msg,
+    msg: msgInput.value,
     to: selectedUser
   });
 
   msgInput.value = "";
 }
 
+/* ÜZENETEK */
 socket.on("message", (data) => {
   const div = document.createElement("div");
+  div.className = "message";
 
-  if (data.to !== "all" && data.to !== currentUser.username) return;
+  let icon = "";
 
-  let admin = data.username === "Predator" ? "👑" : "";
+  if (data.username === "Predator") icon = "👑";
+  else if (data.username === currentUser.username) icon = "🟢";
 
-  div.innerHTML = `${admin} <b>${data.username}</b>: ${data.msg}`;
+  div.innerHTML = `${icon} <b>${data.username}</b>: ${data.msg}`;
+
   messages.appendChild(div);
 });
 
+/* USER LIST */
 socket.on("users", (users) => {
   usersList.innerHTML = "";
 
   users.forEach(u => {
     const li = document.createElement("li");
-    li.innerText = u;
+
+    li.innerHTML = `<span>${u}</span>`;
 
     li.onclick = () => {
       selectedUser = u;
-      alert("Privát chat: " + u);
     };
 
-    if (currentUser.role === "admin") {
-      const btn = document.createElement("button");
-      btn.innerText = "🚫";
-      btn.onclick = () => socket.emit("ban", u);
-      li.appendChild(btn);
+    // OWNER PANEL
+    if (currentUser.role === "owner") {
+      const adminBtn = document.createElement("button");
+      adminBtn.innerText = "👑";
+      adminBtn.onclick = (e) => {
+        e.stopPropagation();
+        setRole(u, "admin");
+      };
+
+      const modBtn = document.createElement("button");
+      modBtn.innerText = "🛡";
+      modBtn.onclick = (e) => {
+        e.stopPropagation();
+        setRole(u, "mod");
+      };
+
+      const banBtn = document.createElement("button");
+      banBtn.innerText = "🚫";
+      banBtn.onclick = (e) => {
+        e.stopPropagation();
+        socket.emit("ban", u);
+      };
+
+      li.appendChild(adminBtn);
+      li.appendChild(modBtn);
+      li.appendChild(banBtn);
     }
 
     usersList.appendChild(li);
   });
 });
+
+function setRole(username, role) {
+  socket.emit("setRole", { username, role });
+  alert(username + " -> " + role);
+}
 
 socket.on("banned", () => {
   alert("Ki lettél tiltva!");
