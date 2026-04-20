@@ -10,46 +10,57 @@ app.use(express.static("public"));
 
 let users = {};
 let messages = [];
+let banned = [];
 
-// ADMIN név
-const ADMIN_NAME = "admin";
+const ADMINS = ["roncsika38"];
 
 io.on("connection", (socket) => {
 
     socket.on("join", (username) => {
-        socket.username = username;
 
+        if (banned.includes(username)) {
+            socket.emit("banned");
+            return;
+        }
+
+        socket.username = username;
         users[socket.id] = username;
 
-        // küldjük az eddigi chatet
         socket.emit("chatHistory", messages);
-
         io.emit("users", Object.values(users));
-    });
-
-    socket.on("typing", () => {
-        socket.broadcast.emit("typing", socket.username);
     });
 
     socket.on("message", (data) => {
 
-        // ADMIN COMMANDS
-        if (socket.username === ADMIN_NAME) {
+        if (ADMINS.includes(socket.username)) {
 
-            // CLEAR
             if (data.msg === "/clear") {
                 messages = [];
                 io.emit("clearChat");
                 return;
             }
 
-            // KICK
             if (data.msg.startsWith("/kick ")) {
-                const target = data.msg.split(" ")[1];
+                let target = data.msg.split(" ")[1];
 
                 for (let id in users) {
                     if (users[id] === target) {
                         io.to(id).emit("kicked");
+                        delete users[id];
+                    }
+                }
+
+                io.emit("users", Object.values(users));
+                return;
+            }
+
+            if (data.msg.startsWith("/ban ")) {
+                let target = data.msg.split(" ")[1];
+                banned.push(target);
+
+                for (let id in users) {
+                    if (users[id] === target) {
+                        io.to(id).emit("banned");
                         delete users[id];
                     }
                 }
@@ -66,11 +77,7 @@ io.on("connection", (socket) => {
         };
 
         messages.push(msgData);
-
-        // max 100 üzenet
-        if (messages.length > 100) {
-            messages.shift();
-        }
+        if (messages.length > 100) messages.shift();
 
         io.emit("message", msgData);
     });
@@ -81,5 +88,4 @@ io.on("connection", (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server fut: " + PORT));
+server.listen(process.env.PORT || 3000);
