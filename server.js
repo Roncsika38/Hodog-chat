@@ -9,47 +9,77 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 let users = {};
-let admins = ["roncsika38"]; // 👑 ide írd a neved
+let messages = [];
+
+// ADMIN név
+const ADMIN_NAME = "admin";
 
 io.on("connection", (socket) => {
 
     socket.on("join", (username) => {
         socket.username = username;
 
-        users[socket.id] = {
-            name: username,
-            admin: admins.includes(username)
-        };
+        users[socket.id] = username;
 
-        io.emit("message", {
-            username: "🔔",
-            msg: username + " belépett"
-        });
+        // küldjük az eddigi chatet
+        socket.emit("chatHistory", messages);
 
         io.emit("users", Object.values(users));
+    });
+
+    socket.on("typing", () => {
+        socket.broadcast.emit("typing", socket.username);
     });
 
     socket.on("message", (data) => {
-        io.emit("message", data);
+
+        // ADMIN COMMANDS
+        if (socket.username === ADMIN_NAME) {
+
+            // CLEAR
+            if (data.msg === "/clear") {
+                messages = [];
+                io.emit("clearChat");
+                return;
+            }
+
+            // KICK
+            if (data.msg.startsWith("/kick ")) {
+                const target = data.msg.split(" ")[1];
+
+                for (let id in users) {
+                    if (users[id] === target) {
+                        io.to(id).emit("kicked");
+                        delete users[id];
+                    }
+                }
+
+                io.emit("users", Object.values(users));
+                return;
+            }
+        }
+
+        const msgData = {
+            username: socket.username,
+            msg: data.msg,
+            time: new Date().toLocaleTimeString()
+        };
+
+        messages.push(msgData);
+
+        // max 100 üzenet
+        if (messages.length > 100) {
+            messages.shift();
+        }
+
+        io.emit("message", msgData);
     });
 
     socket.on("disconnect", () => {
-        const user = users[socket.id];
-
-        if (user) {
-            io.emit("message", {
-                username: "🔔",
-                msg: user.name + " kilépett"
-            });
-        }
-
         delete users[socket.id];
         io.emit("users", Object.values(users));
     });
-
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log("Server fut: " + PORT);
-});
+server.listen(PORT, () => console.log("Server fut: " + PORT));
