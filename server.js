@@ -12,22 +12,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-/* =======================
-   🔥 MONGODB
-======================= */
-mongoose.connect("mongodb+srv://roncsika635:Csicso1987@@@cluster0.1t1i5jo.mongodb.net/chat?retryWrites=true&w=majority")
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.log(err));
-.then(() => console.log("✅ MongoDB connected"))
-.catch(err => console.log(err));
+// 👉 MONGO (IDE A SAJÁTOD)
+mongoose.connect("mongodb+srv://roncsika635:Csicso1987%40%40%40@cluster0.1t1l5jo.mongodb.net/chat");
 
-/* =======================
-   🔥 MODEL
-======================= */
+console.log("Mongo connected");
+
+// MODEL
 const User = mongoose.model("User", {
   username: String,
   password: String,
-  role: String
+  role: String,
+  avatar: String
 });
 
 const Message = mongoose.model("Message", {
@@ -36,86 +31,74 @@ const Message = mongoose.model("Message", {
   likes: { type: Number, default: 0 }
 });
 
-/* =======================
-   🔥 ADMIN
-======================= */
+// 👉 FŐ ADMIN (AUTO)
 async function createAdmin() {
-  const admin = await User.findOne({ username: "Predator" });
-
-  if (!admin) {
+  const exists = await User.findOne({ username: "Zoltan" });
+  if (!exists) {
     await User.create({
-      username: "Predator",
-      password: "Csicso1987@@@",
-      role: "admin"
+      username: "Zoltan",
+      password: "1234",
+      role: "owner"
     });
-
-    console.log("🔥 Admin kész");
+    console.log("Admin created");
   }
 }
 createAdmin();
 
-/* =======================
-   🔥 AUTH
-======================= */
+// REGISTER
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
   const exists = await User.findOne({ username });
-  if (exists) return res.status(400).send("Exists");
+  if (exists) return res.json({ error: "Létezik" });
 
-  const user = await User.create({
+  await User.create({
     username,
     password,
     role: "user"
   });
 
-  res.send(user);
+  res.json({ success: true });
 });
 
+// LOGIN
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   const user = await User.findOne({ username, password });
-  if (!user) return res.status(401).send("Hiba");
+  if (!user) return res.json({ error: "Hibás adat" });
 
-  res.send(user);
+  res.json(user);
 });
 
-/* =======================
-   🔥 ADMIN API
-======================= */
-app.get("/users", async (req, res) => {
-  const users = await User.find();
-  res.send(users);
-});
-
-/* =======================
-   🔥 SOCKET CHAT + LIKE
-======================= */
+// SOCKET
 io.on("connection", (socket) => {
+  socket.on("join", async (user) => {
+    socket.user = user;
 
-  socket.on("chat message", async (msg) => {
-    const message = await Message.create(msg);
-    io.emit("chat message", message);
+    const messages = await Message.find().limit(50);
+    socket.emit("messages", messages);
+  });
+
+  socket.on("message", async (msg) => {
+    const data = {
+      username: socket.user.username,
+      text: msg
+    };
+
+    const saved = await Message.create(data);
+    io.emit("message", saved);
   });
 
   socket.on("like", async (id) => {
     const msg = await Message.findById(id);
-    if (!msg) return;
-
     msg.likes++;
     await msg.save();
 
-    io.emit("update likes", msg);
+    io.emit("update", msg);
   });
-
 });
 
-/* =======================
-   🔥 SERVER
-======================= */
-const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-  console.log("🔥 Fut: " + PORT);
+server.listen(process.env.PORT || 3000, () => {
+  console.log("Server fut");
 });
