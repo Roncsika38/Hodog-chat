@@ -1,99 +1,34 @@
 body {
-  margin: 0;
-  font-family: Arial;
-  background: #0f172a;
-  color: white;
+  margin:0;
+  font-family:sans-serif;
+  background: linear-gradient(135deg,#0f0f0f,#1a1a2e);
+  color:white;
 }
 
-/* LOGIN */
-#auth {
-  text-align: center;
-  margin-top: 100px;
-}
-
-input {
-  display: block;
-  margin: 10px auto;
-  padding: 10px;
-  width: 200px;
-}
-
-button {
-  padding: 10px;
-}
-
-/* CHAT */
 #chat {
-  display: flex;
-  height: 100vh;
+  display:flex;
+  height:100vh;
 }
 
-/* BAL OLDAL */
 .sidebar {
-  width: 260px;
-  background: #020617;
-  padding: 10px;
-  border-right: 2px solid #1e293b;
+  width:250px;
+  background:#111;
+  padding:10px;
 }
 
-.sidebar h3 {
-  margin-top: 0;
-}
-
-/* USER LIST */
-#usersList {
-  padding: 0;
-}
-
-#usersList li {
-  list-style: none;
-  margin: 10px 0;
-  padding: 10px;
-  background: #1e293b;
-  border-radius: 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* GOMBOK */
-#usersList button {
-  margin-left: 5px;
-  border: none;
-  padding: 5px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-/* JOBB OLDAL */
 .main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  flex:1;
+  display:flex;
+  flex-direction:column;
 }
 
 #messages {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
+  flex:1;
+  overflow:auto;
 }
 
-.message {
-  margin: 8px 0;
-}
-
-/* INPUT */
-.input {
-  display: flex;
-  padding: 10px;
-  background: #020617;
-}
-
-.input input {
-  flex: 1;
-  padding: 10px;
-}
-
-.input button {
-  width: 120px;
+button {
+  background:#00ffcc;
+  border:none;
+  padding:10px;
 }
