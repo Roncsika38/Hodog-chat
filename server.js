@@ -13,9 +13,9 @@ app.use(express.json());
 app.use(express.static("public"));
 
 /* =======================
-   🔥 MONGODB CONNECT
+   🔥 MONGODB
 ======================= */
-mongoose.connect("IDE_IRD_A_MONGODB_LINKED")
+mongoose.connect("IDE_IRD_A_MONGO_LINKED")
 .then(() => console.log("✅ MongoDB connected"))
 .catch(err => console.log(err));
 
@@ -28,8 +28,14 @@ const User = mongoose.model("User", {
   role: String
 });
 
+const Message = mongoose.model("Message", {
+  username: String,
+  text: String,
+  likes: { type: Number, default: 0 }
+});
+
 /* =======================
-   🔥 DEFAULT ADMIN
+   🔥 ADMIN
 ======================= */
 async function createAdmin() {
   const admin = await User.findOne({ username: "Predator" });
@@ -41,7 +47,7 @@ async function createAdmin() {
       role: "admin"
     });
 
-    console.log("🔥 Admin kész: Predator / Csicso1987@@@");
+    console.log("🔥 Admin kész");
   }
 }
 createAdmin();
@@ -49,13 +55,11 @@ createAdmin();
 /* =======================
    🔥 AUTH
 ======================= */
-
-// REGISTER
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
 
   const exists = await User.findOne({ username });
-  if (exists) return res.status(400).send("User exists");
+  if (exists) return res.status(400).send("Exists");
 
   const user = await User.create({
     username,
@@ -66,51 +70,43 @@ app.post("/register", async (req, res) => {
   res.send(user);
 });
 
-// LOGIN
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   const user = await User.findOne({ username, password });
-  if (!user) return res.status(401).send("Hibás adat");
+  if (!user) return res.status(401).send("Hiba");
 
   res.send(user);
 });
 
 /* =======================
-   🔥 ADMIN PANEL API
+   🔥 ADMIN API
 ======================= */
-
-// összes user
 app.get("/users", async (req, res) => {
   const users = await User.find();
   res.send(users);
 });
 
-// szerep módosítás
-app.post("/set-role", async (req, res) => {
-  const { username, role } = req.body;
-
-  await User.updateOne({ username }, { role });
-  res.send("OK");
-});
-
-// törlés
-app.post("/delete-user", async (req, res) => {
-  const { username } = req.body;
-
-  await User.deleteOne({ username });
-  res.send("Deleted");
-});
-
 /* =======================
-   🔥 CHAT (socket)
+   🔥 SOCKET CHAT + LIKE
 ======================= */
 io.on("connection", (socket) => {
-  console.log("User connected");
 
-  socket.on("chat message", (msg) => {
-    io.emit("chat message", msg);
+  socket.on("chat message", async (msg) => {
+    const message = await Message.create(msg);
+    io.emit("chat message", message);
   });
+
+  socket.on("like", async (id) => {
+    const msg = await Message.findById(id);
+    if (!msg) return;
+
+    msg.likes++;
+    await msg.save();
+
+    io.emit("update likes", msg);
+  });
+
 });
 
 /* =======================
@@ -119,5 +115,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log("🔥 Server fut: " + PORT);
+  console.log("🔥 Fut: " + PORT);
 });
