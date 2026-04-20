@@ -12,12 +12,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-/* ================== MONGODB ================== */
+/* ===== DATABASE ===== */
 mongoose.connect("mongodb+srv://roncsika635:12345678@cluster0.1t115j0.mongodb.net/chat")
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.log(err));
 
-/* ================== MODEL ================== */
+/* ===== MODELS ===== */
 const User = mongoose.model("User", {
   username: String,
   password: String,
@@ -30,33 +30,37 @@ const Message = mongoose.model("Message", {
   time: String
 });
 
-/* ================== REGISTER ================== */
+/* ===== ONLINE USERS ===== */
+let onlineUsers = {};
+
+/* ===== AUTH ===== */
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-
   const role = username === "roncsika38" ? "admin" : "user";
 
   await User.create({ username, password, role });
-
   res.json({ success: true });
 });
 
-/* ================== LOGIN ================== */
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   const user = await User.findOne({ username, password });
-
   if (!user) return res.json({ error: "Hibás adatok" });
 
   res.json({ success: true, user });
 });
 
-/* ================== SOCKET ================== */
+/* ===== SOCKET ===== */
 io.on("connection", (socket) => {
 
-  socket.on("join", async (username) => {
-    socket.username = username;
+  socket.on("join", async (user) => {
+    socket.username = user.username;
+    socket.role = user.role;
+
+    onlineUsers[socket.id] = user;
+
+    io.emit("online", Object.values(onlineUsers));
 
     const messages = await Message.find().limit(50);
     socket.emit("loadMessages", messages);
@@ -69,13 +73,25 @@ io.on("connection", (socket) => {
       time: new Date().toLocaleTimeString()
     };
 
-    await Message.create(data);
-    io.emit("message", data);
+    const saved = await Message.create(data);
+    io.emit("message", { ...data, _id: saved._id });
+  });
+
+  socket.on("deleteMsg", async (id) => {
+    if (socket.role !== "admin") return;
+
+    await Message.findByIdAndDelete(id);
+    io.emit("deleteMsg", id);
+  });
+
+  socket.on("disconnect", () => {
+    delete onlineUsers[socket.id];
+    io.emit("online", Object.values(onlineUsers));
   });
 
 });
 
-/* ================== SERVER ================== */
+/* ===== SERVER ===== */
 server.listen(3000, () => {
-  console.log("🚀 Server fut a 3000 porton");
+  console.log("🚀 Server fut");
 });
