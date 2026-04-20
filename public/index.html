@@ -2,55 +2,87 @@
 <html>
 <head>
     <title>Hodog Chat</title>
+
     <style>
         body {
-            background: #c0c0c0;
-            font-family: Arial;
+            background: black;
+            font-family: Verdana;
+            color: lime;
         }
 
         #chat {
-            width: 500px;
+            width: 600px;
             margin: 20px auto;
-            background: white;
-            border: 2px solid black;
+            border: 3px solid lime;
             padding: 10px;
+            background: #000;
+        }
+
+        h2 {
+            text-align: center;
+            color: yellow;
+            text-shadow: 0 0 10px yellow;
         }
 
         #messages {
-            height: 250px;
+            height: 300px;
             overflow-y: scroll;
-            border: 1px solid black;
-            margin-bottom: 10px;
+            border: 2px solid lime;
             padding: 5px;
-            background: #f5f5f5;
+            background: black;
+            font-size: 14px;
+        }
+
+        .msg {
+            margin: 2px 0;
+        }
+
+        .name {
+            font-weight: bold;
         }
 
         input {
+            background: black;
+            color: lime;
+            border: 1px solid lime;
             padding: 5px;
         }
 
         button {
+            background: lime;
+            border: none;
             padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: yellow;
         }
 
         #users {
             margin-top: 10px;
-            border-top: 1px solid black;
+            border-top: 1px solid lime;
+            padding-top: 5px;
+        }
+
+        .admin {
+            color: red;
         }
     </style>
 </head>
+
 <body>
 
 <div id="chat">
-    <h2>Hodog Chat</h2>
+    <h2>🔥 HODOG CHAT 🔥</h2>
 
     <input id="username" placeholder="Név">
-    <button onclick="join()">Csatlakozás</button>
+    <button onclick="join()">Belépés</button>
 
     <div id="messages"></div>
 
-    <input id="msg" placeholder="Üzenet">
-    <button onclick="send()">Küldés</button>
+    <input id="msg" placeholder="Írj valamit...">
+    <button onclick="send()">Küld</button>
 
     <div id="users">
         <b>Online:</b>
@@ -63,28 +95,74 @@
 const socket = io();
 let username = "";
 
+function randomColor() {
+    const colors = ["lime","cyan","yellow","orange","pink"];
+    return colors[Math.floor(Math.random()*colors.length)];
+}
+
 function join() {
     username = document.getElementById("username").value;
+
+    if(username === "admin") {
+        alert("👑 Admin belépett");
+    }
+
     socket.emit("join", username);
 }
 
 function send() {
     const msg = document.getElementById("msg").value;
-    socket.emit("message", { username, msg });
+
+    if(msg === "") return;
+
+    socket.emit("message", {
+        username,
+        msg,
+        color: randomColor()
+    });
+
+    document.getElementById("msg").value = "";
 }
 
 socket.on("message", (data) => {
     const div = document.createElement("div");
-    div.textContent = data.username + ": " + data.msg;
+    div.className = "msg";
+
+    const name = document.createElement("span");
+    name.className = "name";
+    name.style.color = data.color || "white";
+    name.textContent = data.username + ": ";
+
+    if(data.username === "admin") {
+        name.classList.add("admin");
+    }
+
+    const text = document.createElement("span");
+    text.textContent = data.msg;
+
+    div.appendChild(name);
+    div.appendChild(text);
+
     document.getElementById("messages").appendChild(div);
+
+    // auto scroll
+    const box = document.getElementById("messages");
+    box.scrollTop = box.scrollHeight;
 });
 
 socket.on("users", (users) => {
     const list = document.getElementById("userList");
     list.innerHTML = "";
+
     users.forEach(u => {
         const li = document.createElement("li");
-        li.textContent = u;
+
+        if(u === "admin") {
+            li.innerHTML = "👑 " + u;
+        } else {
+            li.textContent = u;
+        }
+
         list.appendChild(li);
     });
 });
