@@ -1,69 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hodog Chat</title>
+    <title>Hodog Chat</title>
+    <style>
+        body {
+            background: #c0c0c0;
+            font-family: Arial;
+        }
+
+        #chat {
+            width: 500px;
+            margin: 20px auto;
+            background: white;
+            border: 2px solid black;
+            padding: 10px;
+        }
+
+        #messages {
+            height: 250px;
+            overflow-y: scroll;
+            border: 1px solid black;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #f5f5f5;
+        }
+
+        input {
+            padding: 5px;
+        }
+
+        button {
+            padding: 5px 10px;
+        }
+
+        #users {
+            margin-top: 10px;
+            border-top: 1px solid black;
+        }
+    </style>
 </head>
 <body>
 
-<h2>Hodog Chat</h2>
+<div id="chat">
+    <h2>Hodog Chat</h2>
 
-<input id="username" placeholder="Neved">
-<button onclick="join()">Csatlakozás</button>
+    <input id="username" placeholder="Név">
+    <button onclick="join()">Csatlakozás</button>
 
-<ul id="messages"></ul>
+    <div id="messages"></div>
 
-<input id="msg" placeholder="Írj üzenetet">
-<button onclick="send()">Küldés</button>
+    <input id="msg" placeholder="Üzenet">
+    <button onclick="send()">Küldés</button>
 
-<h3>Online:</h3>
-<ul id="users"></ul>
+    <div id="users">
+        <b>Online:</b>
+        <ul id="userList"></ul>
+    </div>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-let username = null;
+let username = "";
 
 function join() {
-  username = document.getElementById("username").value;
-
-  if (!username) {
-    alert("Adj meg nevet!");
-    return;
-  }
-
-  socket.emit("join", username);
-}
-  username = document.getElementById("username").value;
-  socket.emit("join", username);
+    username = document.getElementById("username").value;
+    socket.emit("join", username);
 }
 
 function send() {
-  if (!username) {
-    alert("Előbb csatlakozz!");
-    return;
-  }
-
-  const msg = document.getElementById("msg").value;
-  socket.emit("message", { username, msg });
-}
-  const msg = document.getElementById("msg").value;
-  socket.emit("message", { username, msg });
+    const msg = document.getElementById("msg").value;
+    socket.emit("message", { username, msg });
 }
 
 socket.on("message", (data) => {
-  const li = document.createElement("li");
-  li.textContent = data.username + ": " + data.msg;
-  document.getElementById("messages").appendChild(li);
+    const div = document.createElement("div");
+    div.textContent = data.username + ": " + data.msg;
+    document.getElementById("messages").appendChild(div);
 });
 
 socket.on("users", (users) => {
-  const list = document.getElementById("users");
-  list.innerHTML = "";
-  users.forEach(u => {
-    const li = document.createElement("li");
-    li.textContent = u;
-    list.appendChild(li);
-  });
+    const list = document.getElementById("userList");
+    list.innerHTML = "";
+    users.forEach(u => {
+        const li = document.createElement("li");
+        li.textContent = u;
+        list.appendChild(li);
+    });
 });
 </script>
 
