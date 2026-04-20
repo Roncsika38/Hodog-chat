@@ -1,73 +1,64 @@
 const socket = io();
+let currentUser = null;
 
-let username = "";
+function login() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
 
-/* ===== BELÉPÉS ===== */
-function join() {
-  const input = document.getElementById("name");
+  fetch("/login", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ username, password })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      startChat(username);
+    } else {
+      alert("Hibás adat");
+    }
+  });
+}
 
-  username = input.value.trim();
+function register() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
 
-  if (!username) {
-    alert("Írj be nevet!");
-    return;
-  }
+  fetch("/register", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ username, password })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert("Regisztrálva!");
+  });
+}
 
-  // UI váltás
-  document.getElementById("login").style.display = "none";
+function startChat(username) {
+  currentUser = username;
+
+  document.getElementById("auth").style.display = "none";
   document.getElementById("chat").style.display = "flex";
 
-  // csatlakozás
-  socket.emit("join", { username });
+  socket.emit("join", username);
 }
 
-/* ===== ÜZENET KÜLDÉS ===== */
 function send() {
-  const input = document.getElementById("msg");
-  const text = input.value.trim();
-
-  if (!text) return;
-
-  socket.emit("message", text);
-
-  input.value = "";
+  const msg = document.getElementById("msg").value;
+  socket.emit("message", msg);
+  document.getElementById("msg").value = "";
 }
 
-/* ===== ENTER KÜLDÉS ===== */
-document.addEventListener("DOMContentLoaded", () => {
-  const msgInput = document.getElementById("msg");
-
-  if (msgInput) {
-    msgInput.addEventListener("keypress", function(e) {
-      if (e.key === "Enter") {
-        send();
-      }
-    });
-  }
-});
-
-/* ===== ÜZENET FOGADÁS ===== */
-socket.on("message", (m) => {
-  const box = document.getElementById("messages");
-
+socket.on("message", (data) => {
   const div = document.createElement("div");
-  div.innerHTML = `<b>${m.username}:</b> ${m.msg}`;
+  div.className = "message";
 
-  box.appendChild(div);
+  if (data.username === "Predator") {
+    div.innerHTML = "👑 <b>" + data.username + "</b>: " + data.msg;
+  } else {
+    div.innerHTML = "<b>" + data.username + "</b>: " + data.msg;
+  }
 
-  // auto scroll
-  box.scrollTop = box.scrollHeight;
-});
-
-/* ===== USER LISTA ===== */
-socket.on("users", (list) => {
-  const usersDiv = document.getElementById("users");
-
-  usersDiv.innerHTML = "";
-
-  list.forEach(u => {
-    const div = document.createElement("div");
-    div.textContent = u.username;
-    usersDiv.appendChild(div);
-  });
+  document.getElementById("messages").appendChild(div);
 });
