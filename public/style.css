@@ -59,3 +59,6 @@ button {
 #send input {
   flex:1;
 }
+app.get("*", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
