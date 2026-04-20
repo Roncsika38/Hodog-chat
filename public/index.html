@@ -7,6 +7,7 @@
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="auth">
   <h1>🔥 PRO CHAT</h1>
   <input id="username" placeholder="Felhasználó">
@@ -15,20 +16,25 @@
   <button onclick="register()">Regisztráció</button>
 </div>
 
+<!-- CHAT -->
 <div id="chat" style="display:none;">
+
+  <!-- BAL OLDAL -->
   <div class="sidebar">
-    <h3>👥 Online</h3>
-    <ul id="users"></ul>
+    <h3>👥 Userek</h3>
+    <ul id="usersList"></ul>
   </div>
 
+  <!-- JOBB OLDAL -->
   <div class="main">
     <div id="messages"></div>
 
     <div class="input">
-      <input id="msg" placeholder="Írj üzenetet...">
+      <input id="msgInput" placeholder="Írj üzenetet...">
       <button onclick="send()">Küldés</button>
     </div>
   </div>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
