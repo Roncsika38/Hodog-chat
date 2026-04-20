@@ -1,93 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Hodog Chat</title>
+<title>Hodog Chat</title>
 
-    <style>
-        body {
-            background: black;
-            font-family: Verdana;
-            color: lime;
-        }
+<style>
+body {
+    background: black;
+    font-family: Verdana;
+    color: lime;
+}
 
-        #chat {
-            width: 600px;
-            margin: 20px auto;
-            border: 3px solid lime;
-            padding: 10px;
-            background: #000;
-        }
+#chat {
+    width: 650px;
+    margin: 20px auto;
+    border: 3px solid lime;
+    padding: 10px;
+}
 
-        h2 {
-            text-align: center;
-            color: yellow;
-            text-shadow: 0 0 10px yellow;
-        }
+h2 {
+    text-align: center;
+    color: yellow;
+    text-shadow: 0 0 10px yellow;
+}
 
-        #messages {
-            height: 300px;
-            overflow-y: scroll;
-            border: 2px solid lime;
-            padding: 5px;
-            background: black;
-            font-size: 14px;
-        }
+#messages {
+    height: 320px;
+    overflow-y: scroll;
+    border: 2px solid lime;
+    padding: 5px;
+    background: black;
+    font-size: 14px;
+}
 
-        .msg {
-            margin: 2px 0;
-        }
+.msg { margin: 2px 0; }
 
-        .name {
-            font-weight: bold;
-        }
+.name { font-weight: bold; }
 
-        input {
-            background: black;
-            color: lime;
-            border: 1px solid lime;
-            padding: 5px;
-        }
+input {
+    background: black;
+    color: lime;
+    border: 1px solid lime;
+    padding: 5px;
+}
 
-        button {
-            background: lime;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-        }
+button {
+    background: lime;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+}
 
-        button:hover {
-            background: yellow;
-        }
+#users {
+    margin-top: 10px;
+    border-top: 1px solid lime;
+    padding-top: 5px;
+}
 
-        #users {
-            margin-top: 10px;
-            border-top: 1px solid lime;
-            padding-top: 5px;
-        }
-
-        .admin {
-            color: red;
-        }
-    </style>
+.admin { color: red; }
+.private { color: cyan; }
+.time { color: gray; }
+</style>
 </head>
 
 <body>
 
 <div id="chat">
-    <h2>🔥 HODOG CHAT 🔥</h2>
+<h2>🔥 HODOG CHAT 🔥</h2>
 
-    <input id="username" placeholder="Név">
-    <button onclick="join()">Belépés</button>
+<input id="username" placeholder="Név">
+<button onclick="join()">Belépés</button>
 
-    <div id="messages"></div>
+<div id="messages"></div>
 
-    <input id="msg" placeholder="Írj valamit...">
-    <button onclick="send()">Küld</button>
+<input id="msg" placeholder="Írj valamit...">
+<button onclick="send()">Küld</button>
 
-    <div id="users">
-        <b>Online:</b>
-        <ul id="userList"></ul>
-    </div>
+<div id="users">
+<b>Online:</b>
+<ul id="userList"></ul>
+</div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -95,59 +86,97 @@
 const socket = io();
 let username = "";
 
-function randomColor() {
-    const colors = ["lime","cyan","yellow","orange","pink"];
-    return colors[Math.floor(Math.random()*colors.length)];
+// ENTER küldés
+document.getElementById("msg").addEventListener("keypress", function(e){
+    if(e.key === "Enter") send();
+});
+
+// idő
+function getTime() {
+    const d = new Date();
+    return "[" + d.getHours().toString().padStart(2,"0") + ":" +
+                 d.getMinutes().toString().padStart(2,"0") + "]";
+}
+
+// emoji
+function parseEmoji(text) {
+    return text
+        .replaceAll(":smile:", "😄")
+        .replaceAll(":fire:", "🔥")
+        .replaceAll(":heart:", "❤️");
 }
 
 function join() {
     username = document.getElementById("username").value;
-
-    if(username === "admin") {
-        alert("👑 Admin belépett");
-    }
-
     socket.emit("join", username);
 }
 
 function send() {
-    const msg = document.getElementById("msg").value;
+    let msg = document.getElementById("msg").value;
+    if(!msg) return;
 
-    if(msg === "") return;
+    // ADMIN COMMANDS
+    if(username === "admin") {
+        if(msg === "/clear") {
+            document.getElementById("messages").innerHTML = "";
+            return;
+        }
+    }
+
+    // PRIVATE MESSAGE
+    if(msg.startsWith("/w ")) {
+        const parts = msg.split(" ");
+        const target = parts[1];
+        const message = parts.slice(2).join(" ");
+
+        addMessage({
+            username: "(privát) " + username + " → " + target,
+            msg: message,
+            private: true
+        });
+
+        document.getElementById("msg").value = "";
+        return;
+    }
 
     socket.emit("message", {
         username,
         msg,
-        color: randomColor()
     });
 
     document.getElementById("msg").value = "";
 }
 
-socket.on("message", (data) => {
+function addMessage(data) {
     const div = document.createElement("div");
     div.className = "msg";
 
+    const time = document.createElement("span");
+    time.className = "time";
+    time.textContent = getTime() + " ";
+
     const name = document.createElement("span");
     name.className = "name";
-    name.style.color = data.color || "white";
     name.textContent = data.username + ": ";
 
-    if(data.username === "admin") {
-        name.classList.add("admin");
-    }
+    if(data.username === "admin") name.classList.add("admin");
+    if(data.private) name.classList.add("private");
 
     const text = document.createElement("span");
-    text.textContent = data.msg;
+    text.innerHTML = parseEmoji(data.msg);
 
+    div.appendChild(time);
     div.appendChild(name);
     div.appendChild(text);
 
     document.getElementById("messages").appendChild(div);
 
-    // auto scroll
     const box = document.getElementById("messages");
     box.scrollTop = box.scrollHeight;
+}
+
+socket.on("message", (data) => {
+    addMessage(data);
 });
 
 socket.on("users", (users) => {
@@ -156,13 +185,7 @@ socket.on("users", (users) => {
 
     users.forEach(u => {
         const li = document.createElement("li");
-
-        if(u === "admin") {
-            li.innerHTML = "👑 " + u;
-        } else {
-            li.textContent = u;
-        }
-
+        li.textContent = u;
         list.appendChild(li);
     });
 });
