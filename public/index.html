@@ -1,32 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat</title>
+  <title>Chat teszt</title>
 </head>
 <body>
-
-<h2>🔥 Hodog Chat</h2>
-
-<input id="msg" placeholder="Írj valamit..." />
-<button onclick="send()">Küldés</button>
-
-<ul id="messages"></ul>
-
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket = io();
-
-function send() {
-  const msg = document.getElementById("msg").value;
-  socket.emit("message", msg);
-}
-
-socket.on("message", (msg) => {
-  const li = document.createElement("li");
-  li.innerText = msg;
-  document.getElementById("messages").appendChild(li);
-});
-</script>
-
+  <h1>MŰKÖDIK 🔥</h1>
 </body>
 </html>
