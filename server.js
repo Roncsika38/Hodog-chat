@@ -8,18 +8,28 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-io.on("connection", (socket) => {
-  console.log("User connected");
+let users = [];
 
-  socket.on("chat message", (msg) => {
-    io.emit("chat message", msg);
+io.on("connection", (socket) => {
+
+  socket.on("join", (username) => {
+    socket.username = username;
+    users.push(username);
+    io.emit("users", users);
+  });
+
+  socket.on("message", (data) => {
+    io.emit("message", data);
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected");
+    users = users.filter(u => u !== socket.username);
+    io.emit("users", users);
   });
+
 });
 
-server.listen(3000, () => {
-  console.log("Server running on port 3000");
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
 });
