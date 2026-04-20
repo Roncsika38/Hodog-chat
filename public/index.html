@@ -4,36 +4,51 @@
   <title>Hodog Chat</title>
 </head>
 <body>
-  <h1>Hodog Chat</h1>
 
-  <ul id="messages"></ul>
+<h2>Hodog Chat</h2>
 
-  <form id="form">
-    <input id="input" autocomplete="off" />
-    <button>Send</button>
-  </form>
+<input id="username" placeholder="Neved">
+<button onclick="join()">Csatlakozás</button>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+<ul id="messages"></ul>
 
-    const form = document.getElementById('form');
-    const input = document.getElementById('input');
-    const messages = document.getElementById('messages');
+<input id="msg" placeholder="Írj üzenetet">
+<button onclick="send()">Küldés</button>
 
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      if (input.value) {
-        socket.emit('chat message', input.value);
-        input.value = '';
-      }
-    });
+<h3>Online:</h3>
+<ul id="users"></ul>
 
-    socket.on('chat message', function(msg) {
-      const item = document.createElement('li');
-      item.textContent = msg;
-      messages.appendChild(item);
-    });
-  </script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let username = "";
+
+function join() {
+  username = document.getElementById("username").value;
+  socket.emit("join", username);
+}
+
+function send() {
+  const msg = document.getElementById("msg").value;
+  socket.emit("message", { username, msg });
+}
+
+socket.on("message", (data) => {
+  const li = document.createElement("li");
+  li.textContent = data.username + ": " + data.msg;
+  document.getElementById("messages").appendChild(li);
+});
+
+socket.on("users", (users) => {
+  const list = document.getElementById("users");
+  list.innerHTML = "";
+  users.forEach(u => {
+    const li = document.createElement("li");
+    li.textContent = u;
+    list.appendChild(li);
+  });
+});
+</script>
+
 </body>
 </html>
