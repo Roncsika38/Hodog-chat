@@ -2,33 +2,31 @@
 <html>
 <head>
   <title>Chat</title>
-  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="login">
-  <h2>Belépés</h2>
-  <input id="user" placeholder="Név">
-  <input id="pass" type="password" placeholder="Jelszó">
-  <button onclick="login()">Login</button>
-  <button onclick="register()">Register</button>
-</div>
+<h2>🔥 Hodog Chat</h2>
 
-<div id="chat" style="display:none;">
-  <div id="topbar">
-    <span id="username"></span>
-    <button onclick="logout()">Kilépés</button>
-  </div>
+<input id="msg" placeholder="Írj valamit..." />
+<button onclick="send()">Küldés</button>
 
-  <div id="messages"></div>
-
-  <div id="send">
-    <input id="msg" placeholder="Írj...">
-    <button onclick="send()">Küld</button>
-  </div>
-</div>
+<ul id="messages"></ul>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
+<script>
+const socket = io();
+
+function send() {
+  const msg = document.getElementById("msg").value;
+  socket.emit("message", msg);
+}
+
+socket.on("message", (msg) => {
+  const li = document.createElement("li");
+  li.innerText = msg;
+  document.getElementById("messages").appendChild(li);
+});
+</script>
+
 </body>
 </html>
