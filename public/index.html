@@ -2,14 +2,14 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<title>Hodog Ultimate System</title>
+<title>Hodog Pro Engine</title>
 
 <style>
 body {
     margin: 0;
-    font-family: Arial;
-    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-    color: white;
+    font-family: Consolas;
+    background: #0d1117;
+    color: #00ff9c;
 }
 
 #container {
@@ -26,42 +26,64 @@ body {
 
 #messages {
     flex: 1;
-    overflow-y: auto;
     padding: 10px;
+    overflow-y: auto;
+    font-size: 14px;
 }
 
-.msg { margin: 6px 0; }
-.time { font-size: 10px; color: #aaa; }
+.msg {
+    margin: 4px 0;
+}
+
+.time {
+    color: #555;
+    font-size: 11px;
+}
 
 /* INPUT */
 #inputBox {
     padding: 10px;
-    background: #000;
+    border-top: 1px solid #222;
 }
 
 textarea {
     width: 100%;
     height: 60px;
-    resize: none;
-    padding: 8px;
+    background: #0d1117;
+    color: #00ff9c;
+    border: 1px solid #222;
 }
 
-/* OLDAL */
+/* OLDALSÁV */
 #side {
     flex: 1;
-    background: #111;
+    background: #010409;
+    border-left: 1px solid #222;
     padding: 10px;
-    overflow-y: auto;
+}
+
+/* USER */
+.user {
+    padding: 4px;
+    cursor: pointer;
+}
+.user:hover {
+    background: #111;
 }
 
 /* ADMIN */
-.admin { color: red; font-weight: bold; }
-
-.userItem {
-    cursor: pointer;
-    padding: 3px;
+.admin {
+    color: #ff4d4d;
+    font-weight: bold;
 }
-.userItem:hover { background: #333; }
+
+button {
+    background: #111;
+    color: #00ff9c;
+    border: 1px solid #333;
+    margin: 2px;
+    padding: 5px;
+}
 </style>
 </head>
 
@@ -71,7 +93,7 @@ textarea {
 
 <div id="chat">
 
-<h2>🔥 HODOG FULL SYSTEM 🔥</h2>
+<h3>💻 HODOG ENGINE</h3>
 
 <div id="messages"></div>
 
@@ -87,28 +109,24 @@ textarea {
 
 <input id="nameInput" placeholder="Név"><br>
 <input type="color" id="colorInput"><br>
-<button onclick="saveSettings()">Mentés</button>
+<button onclick="save()">Mentés</button>
 
 <hr>
 
 <h3>👥 Online</h3>
-<ul id="users"></ul>
+<div id="users"></div>
 
 <hr>
 
 <div id="adminPanel" style="display:none">
-<h3>👑 Admin Panel</h3>
+<h3>👑 Admin</h3>
 
-<div>Kiválasztott: <span id="selectedUser">-</span></div>
+Kiválasztott: <span id="selected">-</span><br>
 
 <button onclick="kick()">Kick</button>
 <button onclick="ban()">Ban</button>
 <button onclick="clearChat()">Clear</button>
 </div>
-
-<hr>
-
-<div id="me"></div>
 
 </div>
 
@@ -120,13 +138,13 @@ textarea {
 const socket = io();
 
 let username = localStorage.getItem("name") || "";
-let color = localStorage.getItem("color") || "#00ffcc";
-let selectedUser = "";
+let color = localStorage.getItem("color") || "#00ff9c";
+let selected = "";
 
-/* BETÖLTÉS */
-window.onload = () => {
-    document.getElementById("nameInput").value = username;
-    document.getElementById("colorInput").value = color;
+/* LOAD */
+window.onload = ()=>{
+    nameInput.value = username;
+    colorInput.value = color;
 
     if(username){
         socket.emit("join", username);
@@ -134,105 +152,91 @@ window.onload = () => {
     }
 };
 
-/* ENTER + SHIFT */
-document.getElementById("msg").addEventListener("keydown", function(e){
-    if(e.key === "Enter" && !e.shiftKey){
+/* ENTER */
+msg.addEventListener("keydown",(e)=>{
+    if(e.key==="Enter" && !e.shiftKey){
         e.preventDefault();
         send();
     }
 });
 
-/* MENTÉS */
-function saveSettings(){
-    username = document.getElementById("nameInput").value;
-    color = document.getElementById("colorInput").value;
+/* SAVE */
+function save(){
+    username = nameInput.value;
+    color = colorInput.value;
 
-    localStorage.setItem("name", username);
-    localStorage.setItem("color", color);
+    localStorage.setItem("name",username);
+    localStorage.setItem("color",color);
 
     socket.emit("join", username);
     updateMe();
 }
 
-/* PROFIL */
+/* ADMIN CHECK */
 function updateMe(){
-    const me = document.getElementById("me");
-
-    if(username === "roncsika38"){
-        me.innerHTML = "👑 ADMIN";
-        me.style.color = "red";
-        document.getElementById("adminPanel").style.display = "block";
-    } else {
-        me.innerHTML = "👤 USER";
-        me.style.color = color;
+    if(username==="roncsika38"){
+        adminPanel.style.display="block";
     }
 }
 
-/* ÜZENET */
+/* SEND */
 function send(){
-    let msg = document.getElementById("msg").value.trim();
-    if(!msg) return;
+    let text = msg.value.trim();
+    if(!text) return;
 
-    socket.emit("message", {
-        username,
-        msg,
-        color
-    });
-
-    document.getElementById("msg").value="";
+    socket.emit("message",{username,msg:text,color});
+    msg.value="";
 }
 
 /* CHAT */
-socket.on("message", (data)=>{
-    const div=document.createElement("div");
-    div.className="msg";
+socket.on("message",(d)=>{
+    let div=document.createElement("div");
 
-    let nameStyle=`color:${data.color || "#fff"}`;
+    let style=`color:${d.color || "#fff"}`;
 
-    if(data.username==="roncsika38"){
-        nameStyle="color:red;font-weight:bold;";
+    if(d.username==="roncsika38"){
+        style="color:#ff4d4d;font-weight:bold;";
     }
 
     div.innerHTML=`
-    <span class="time">[${data.time}]</span>
-    <span style="${nameStyle}">${data.username}:</span>
-    ${data.msg.replace(/\n/g,"<br>")}`;
+    <span class="time">[${d.time}]</span>
+    <span style="${style}">${d.username}:</span>
+    ${d.msg.replace(/\n/g,"<br>")}`;
 
     messages.appendChild(div);
     messages.scrollTop=999999;
 });
 
-/* USER LIST */
-socket.on("users",(users)=>{
-    const list=document.getElementById("users");
-    list.innerHTML="";
+/* USERS */
+socket.on("users",(u)=>{
+    users.innerHTML="";
 
-    users.forEach(u=>{
-        let li=document.createElement("li");
-        li.className="userItem";
+    u.forEach(name=>{
+        let div=document.createElement("div");
+        div.className="user";
 
-        if(u==="roncsika38"){
-            li.innerHTML="👑 "+u;
-            li.style.color="red";
+        if(name==="roncsika38"){
+            div.innerHTML="👑 "+name;
+            div.style.color="#ff4d4d";
         } else {
-            li.textContent=u;
+            div.textContent=name;
         }
 
-        li.onclick=()=>{
-            selectedUser=u;
-            document.getElementById("selectedUser").innerText=u;
+        div.onclick=()=>{
+            selected=name;
+            document.getElementById("selected").innerText=name;
         };
 
-        list.appendChild(li);
+        users.appendChild(div);
     });
 });
 
 /* ADMIN */
 function kick(){
-    socket.emit("message",{msg:"/kick "+selectedUser});
+    socket.emit("message",{msg:"/kick "+selected});
 }
 function ban(){
-    socket.emit("message",{msg:"/ban "+selectedUser});
+    socket.emit("message",{msg:"/ban "+selected});
 }
 function clearChat(){
     socket.emit("message",{msg:"/clear"});
