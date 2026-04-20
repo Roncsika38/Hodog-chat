@@ -1,47 +1,50 @@
 const socket = io();
+let user;
 
-const messages = document.getElementById("messages");
-const form = document.getElementById("form");
-const input = document.getElementById("input");
+function login() {
+  fetch("/login", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      username: user.value,
+      password: pass.value
+    })
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    if(data.error) return alert(data.error);
 
-let user = JSON.parse(localStorage.getItem("user"));
+    user = data;
+    document.getElementById("login").style.display="none";
+    document.getElementById("chat").style.display="flex";
 
-// küldés
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-
-  socket.emit("chat message", {
-    username: user.username,
-    text: input.value
+    socket.emit("join", user);
   });
+}
 
-  input.value = "";
-});
+function register() {
+  fetch("/register", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      username: user.value,
+      password: pass.value
+    })
+  });
+}
 
-// megjelenítés
-socket.on("chat message", (msg) => {
+function send() {
+  socket.emit("message", input.value);
+  input.value="";
+}
+
+socket.on("message", (msg)=>{
   const li = document.createElement("li");
-
-  li.innerHTML = `
-    <b>${msg.username}</b>: ${msg.text}
-    <button onclick="like('${msg._id}')">👍 ${msg.likes}</button>
-  `;
-
-  li.id = msg._id;
+  li.innerHTML = msg.username + ": " + msg.text + 
+    ` <button onclick="like('${msg._id}')">👍 ${msg.likes}</button>`;
   messages.appendChild(li);
 });
 
-// like frissítés
-socket.on("update likes", (msg) => {
-  const li = document.getElementById(msg._id);
-  if (li) {
-    li.innerHTML = `
-      <b>${msg.username}</b>: ${msg.text}
-      <button onclick="like('${msg._id}')">👍 ${msg.likes}</button>
-    `;
-  }
-});
-
-function like(id) {
+function like(id){
   socket.emit("like", id);
 }
