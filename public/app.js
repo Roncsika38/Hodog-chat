@@ -1,9 +1,10 @@
 const socket = io();
 let currentUser = null;
+let selectedUser = null;
 
 function login() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
+  const username = usernameInput.value;
+  const password = passwordInput.value;
 
   fetch("/login", {
     method: "POST",
@@ -13,52 +14,78 @@ function login() {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      startChat(username);
+      currentUser = data.user;
+      startChat();
     } else {
-      alert("Hibás adat");
+      alert(data.error);
     }
   });
 }
 
 function register() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
   fetch("/register", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ username, password })
-  })
-  .then(res => res.json())
-  .then(data => {
-    alert("Regisztrálva!");
-  });
+    body: JSON.stringify({
+      username: usernameInput.value,
+      password: passwordInput.value
+    })
+  }).then(() => alert("Regisztrálva!"));
 }
 
-function startChat(username) {
-  currentUser = username;
+function startChat() {
+  auth.style.display = "none";
+  chat.style.display = "flex";
 
-  document.getElementById("auth").style.display = "none";
-  document.getElementById("chat").style.display = "flex";
-
-  socket.emit("join", username);
+  socket.emit("join", currentUser.username);
 }
 
 function send() {
-  const msg = document.getElementById("msg").value;
-  socket.emit("message", msg);
-  document.getElementById("msg").value = "";
+  const msg = msgInput.value;
+
+  socket.emit("message", {
+    msg,
+    to: selectedUser
+  });
+
+  msgInput.value = "";
 }
 
 socket.on("message", (data) => {
   const div = document.createElement("div");
-  div.className = "message";
 
-  if (data.username === "Predator") {
-    div.innerHTML = "👑 <b>" + data.username + "</b>: " + data.msg;
-  } else {
-    div.innerHTML = "<b>" + data.username + "</b>: " + data.msg;
-  }
+  if (data.to !== "all" && data.to !== currentUser.username) return;
 
-  document.getElementById("messages").appendChild(div);
+  let admin = data.username === "Predator" ? "👑" : "";
+
+  div.innerHTML = `${admin} <b>${data.username}</b>: ${data.msg}`;
+  messages.appendChild(div);
+});
+
+socket.on("users", (users) => {
+  usersList.innerHTML = "";
+
+  users.forEach(u => {
+    const li = document.createElement("li");
+    li.innerText = u;
+
+    li.onclick = () => {
+      selectedUser = u;
+      alert("Privát chat: " + u);
+    };
+
+    if (currentUser.role === "admin") {
+      const btn = document.createElement("button");
+      btn.innerText = "🚫";
+      btn.onclick = () => socket.emit("ban", u);
+      li.appendChild(btn);
+    }
+
+    usersList.appendChild(li);
+  });
+});
+
+socket.on("banned", () => {
+  alert("Ki lettél tiltva!");
+  location.reload();
 });
