@@ -1,42 +1,67 @@
 body {
   margin: 0;
-  padding: 0;
-  background: #2196f3; /* sima kék */
   font-family: Arial;
+  background: #0f172a;
   color: white;
 }
 
-#chat {
+.hidden { display: none; }
+
+#login {
+  display: flex;
   height: 100vh;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+#chat {
   display: flex;
   flex-direction: column;
+  height: 100vh;
 }
 
 #messages {
   flex: 1;
-  padding: 10px;
   overflow-y: auto;
+  padding: 10px;
 }
 
-#inputArea {
+.message {
+  max-width: 60%;
+  padding: 10px;
+  margin: 5px;
+  border-radius: 15px;
+}
+
+.me {
+  background: #3b82f6;
+  align-self: flex-end;
+}
+
+.other {
+  background: #1e293b;
+  align-self: flex-start;
+}
+
+.input-area {
   display: flex;
   padding: 10px;
-  background: rgba(0,0,0,0.2);
+  background: #020617;
 }
 
 input {
   flex: 1;
   padding: 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 button {
-  margin-left: 5px;
+  margin-left: 10px;
   padding: 10px;
   border: none;
-  border-radius: 8px;
-  background: #0d47a1;
+  background: #3b82f6;
   color: white;
-  cursor: pointer;
+  border-radius: 10px;
 }
