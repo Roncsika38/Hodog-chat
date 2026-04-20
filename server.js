@@ -2,87 +2,108 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
+const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public"));
+app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 
-/* ===== MONGODB ===== */
-mongoose.connect("mongodb+srv://chatuser:12345678@cluster0.1t115j0.mongodb.net/chat")
+mongoose.connect("IDE_IRD_A_MONGO_LINKED")
 .then(() => console.log("MongoDB connected"))
 .catch(err => console.log(err));
 
-/* ===== MODELS ===== */
+// ===== MODELS =====
 const User = mongoose.model("User", {
   username: String,
   password: String,
-  role: String
+  role: String,
+  avatar: String,
+  banned: { type: Boolean, default: false }
 });
 
 const Message = mongoose.model("Message", {
   username: String,
-  msg: String
+  msg: String,
+  to: String,
+  time: String
 });
 
-/* ===== AUTO USER ===== */
-async function createDefaultUser() {
-  const exist = await User.findOne({ username: "Predator" });
+// ===== AUTH =====
+app.post("/register", async (req, res) => {
+  const { username, password } = req.body;
 
-  if (!exist) {
-    await User.create({
-      username: "Predator",
-      password: "1234",
-      role: "admin"
-    });
-    console.log("Predator user created");
-  }
-}
+  const role = username === "Predator" ? "admin" : "user";
 
-createDefaultUser();
+  await User.create({
+    username,
+    password,
+    role,
+    avatar: "",
+    banned: false
+  });
 
-/* ===== AUTH ===== */
+  res.json({ success: true });
+});
+
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   const user = await User.findOne({ username, password });
 
-  if (!user) return res.json({ error: "Hibás adatok" });
+  if (!user) return res.json({ error: "Hibás adat" });
+  if (user.banned) return res.json({ error: "Tiltva vagy!" });
 
   res.json({ success: true, user });
 });
 
-/* ===== CHAT ===== */
-let users = {};
+// ===== SOCKET =====
+let onlineUsers = {};
 
 io.on("connection", (socket) => {
 
-  socket.on("join", (user) => {
-    users[socket.id] = user;
-    socket.username = user.username;
-    socket.role = user.role;
+  socket.on("join", async (username) => {
+    socket.username = username;
+    onlineUsers[username] = socket.id;
 
-    io.emit("users", Object.values(users));
+    io.emit("users", Object.keys(onlineUsers));
+
+    const messages = await Message.find().limit(50);
+    socket.emit("loadMessages", messages);
   });
 
-  socket.on("message", async (msg) => {
-    const data = {
+  socket.on("message", async (data) => {
+    const msgData = {
       username: socket.username,
-      msg
+      msg: data.msg,
+      to: data.to || "all",
+      time: new Date().toLocaleTimeString()
     };
 
-    await Message.create(data);
+    await Message.create(msgData);
 
-    io.emit("message", data);
+    if (data.to && onlineUsers[data.to]) {
+      io.to(onlineUsers[data.to]).emit("message", msgData);
+    } else {
+      io.emit("message", msgData);
+    }
+  });
+
+  socket.on("ban", async (username) => {
+    await User.updateOne({ username }, { banned: true });
+    if (onlineUsers[username]) {
+      io.to(onlineUsers[username]).emit("banned");
+    }
   });
 
   socket.on("disconnect", () => {
-    delete users[socket.id];
-    io.emit("users", Object.values(users));
+    delete onlineUsers[socket.username];
+    io.emit("users", Object.keys(onlineUsers));
   });
 
 });
 
-server.listen(3000, () => console.log("Server running"));
+server.listen(3000, () => console.log("Server megy 🚀"));
