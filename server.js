@@ -2,96 +2,45 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const mongoose = require("mongoose");
-const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(cors());
-app.use(express.json());
 app.use(express.static("public"));
+app.use(express.json());
 
-/* ===== DATABASE ===== */
-mongoose.connect("mongodb+srv://roncsika635:12345678@cluster0.1t115j0.mongodb.net/chat")
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.log(err));
-
-/* ===== MODELS ===== */
-const User = mongoose.model("User", {
-  username: String,
-  password: String,
-  role: String
-});
+mongoose.connect("mongodb+srv://roncsika635:12345678@cluster0.1t115j0.mongodb.net/chat");
 
 const Message = mongoose.model("Message", {
   username: String,
-  msg: String,
-  time: String
+  msg: String
 });
 
-/* ===== ONLINE USERS ===== */
-let onlineUsers = {};
+let users = {};
 
-/* ===== AUTH ===== */
-app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-  const role = username === "roncsika38" ? "admin" : "user";
-
-  await User.create({ username, password, role });
-  res.json({ success: true });
-});
-
-app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-
-  const user = await User.findOne({ username, password });
-  if (!user) return res.json({ error: "Hibás adatok" });
-
-  res.json({ success: true, user });
-});
-
-/* ===== SOCKET ===== */
 io.on("connection", (socket) => {
 
-  socket.on("join", async (user) => {
-    socket.username = user.username;
-    socket.role = user.role;
-
-    onlineUsers[socket.id] = user;
-
-    io.emit("online", Object.values(onlineUsers));
-
-    const messages = await Message.find().limit(50);
-    socket.emit("loadMessages", messages);
+  socket.on("join", (user) => {
+    users[socket.id] = user;
+    io.emit("users", Object.values(users));
   });
 
   socket.on("message", async (msg) => {
-    const data = {
-      username: socket.username,
-      msg,
-      time: new Date().toLocaleTimeString()
-    };
+    const user = users[socket.id];
 
-    const saved = await Message.create(data);
-    io.emit("message", { ...data, _id: saved._id });
-  });
+    const data = { username: user.username, msg };
 
-  socket.on("deleteMsg", async (id) => {
-    if (socket.role !== "admin") return;
+    await Message.create(data);
 
-    await Message.findByIdAndDelete(id);
-    io.emit("deleteMsg", id);
+    io.emit("message", data);
   });
 
   socket.on("disconnect", () => {
-    delete onlineUsers[socket.id];
-    io.emit("online", Object.values(onlineUsers));
+    delete users[socket.id];
+    io.emit("users", Object.values(users));
   });
 
 });
 
-/* ===== SERVER ===== */
-server.listen(3000, () => {
-  console.log("🚀 Server fut");
-});
+server.listen(3000);
