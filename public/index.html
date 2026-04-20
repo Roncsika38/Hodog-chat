@@ -12,6 +12,7 @@ body {
     color: white;
 }
 
+/* FŐ KONTAINER */
 #container {
     display: flex;
     height: 100vh;
@@ -22,6 +23,7 @@ body {
     flex: 3;
     display: flex;
     flex-direction: column;
+    border-right: 2px solid #444;
 }
 
 #messages {
@@ -39,11 +41,13 @@ body {
     color: #aaa;
 }
 
-/* JOBB PANEL */
+/* OLDALSÁV (EZ HIÁNYZOTT!) */
 #side {
     flex: 1;
+    min-width: 250px;
     background: #111;
     padding: 10px;
+    overflow-y: auto;
 }
 
 /* INPUT */
@@ -53,9 +57,9 @@ body {
     background: #000;
 }
 
-input, button, select {
+input, button {
     margin: 3px;
-    padding: 5px;
+    padding: 6px;
 }
 
 /* ADMIN */
@@ -70,6 +74,7 @@ input, button, select {
 
 <div id="container">
 
+<!-- CHAT -->
 <div id="chat">
 
 <h2>🔥 HODOG PRO+ 🔥</h2>
@@ -83,14 +88,15 @@ input, button, select {
 
 </div>
 
+<!-- OLDALSÁV -->
 <div id="side">
 
 <h3>⚙️ Beállítás</h3>
 
-Név:<br>
+<label>Név:</label><br>
 <input id="nameInput"><br>
 
-Szín:<br>
+<label>Szín:</label><br>
 <input type="color" id="colorInput"><br>
 
 <button onclick="saveSettings()">Mentés</button>
@@ -99,6 +105,8 @@ Szín:<br>
 
 <h3>👥 Online</h3>
 <ul id="users"></ul>
+
+<hr>
 
 <div id="me"></div>
 
@@ -184,6 +192,8 @@ socket.on("message", (data) => {
     `;
 
     document.getElementById("messages").appendChild(div);
+
+    document.getElementById("messages").scrollTop = 999999;
 });
 
 /* USER LIST */
