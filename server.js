@@ -10,9 +10,12 @@ const io = new Server(server);
 app.use(express.static("public"));
 app.use(express.json());
 
-mongoose.connect("mongodb+srv://roncsika635:12345678@cluster0.1t115j0.mongodb.net/chat");
+/* ===== MONGODB ===== */
+mongoose.connect("mongodb+srv://chatuser:12345678@cluster0.1t115j0.mongodb.net/chat")
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.log(err));
 
-/* ===== MODEL ===== */
+/* ===== MODELS ===== */
 const User = mongoose.model("User", {
   username: String,
   password: String,
@@ -24,25 +27,29 @@ const Message = mongoose.model("Message", {
   msg: String
 });
 
+/* ===== AUTO USER ===== */
+async function createDefaultUser() {
+  const exist = await User.findOne({ username: "Predator" });
+
+  if (!exist) {
+    await User.create({
+      username: "Predator",
+      password: "1234",
+      role: "admin"
+    });
+    console.log("Predator user created");
+  }
+}
+
+createDefaultUser();
+
 /* ===== AUTH ===== */
-app.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-
-  const exist = await User.findOne({ username });
-  if (exist) return res.json({ error: "Létezik" });
-
-  const role = username === "admin" ? "admin" : "user";
-
-  await User.create({ username, password, role });
-
-  res.json({ success: true });
-});
-
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
   const user = await User.findOne({ username, password });
-  if (!user) return res.json({ error: "Hibás" });
+
+  if (!user) return res.json({ error: "Hibás adatok" });
 
   res.json({ success: true, user });
 });
@@ -78,4 +85,4 @@ io.on("connection", (socket) => {
 
 });
 
-server.listen(3000);
+server.listen(3000, () => console.log("Server running"));
