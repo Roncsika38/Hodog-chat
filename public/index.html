@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="hu">
 <head>
   <meta charset="UTF-8">
   <title>Chat</title>
@@ -7,17 +7,20 @@
 </head>
 <body>
 
-<div id="chat">
+<div id="login">
+  <input id="username" placeholder="Neved">
+  <button onclick="login()">Belépés</button>
+</div>
+
+<div id="chat" class="hidden">
   <div id="messages"></div>
 
-  <div id="inputArea">
-    <input id="msg" placeholder="Írj üzenetet..." />
-    <button onclick="sendMsg()">Küldés</button>
+  <div class="input-area">
+    <input id="messageInput" placeholder="Írj üzenetet...">
+    <button onclick="sendMessage()">Küldés</button>
   </div>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
-
+<script type="module" src="app.js"></script>
 </body>
 </html>
