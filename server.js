@@ -15,7 +15,9 @@ app.use(express.static("public"));
 /* =======================
    🔥 MONGODB
 ======================= */
-mongoose.connect("IDE_IRD_A_MONGO_LINKED")
+mongoose.connect("mongodb+srv://roncsika635:Csicso1987@@@cluster0.1t1i5jo.mongodb.net/chat?retryWrites=true&w=majority")
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.log(err));
 .then(() => console.log("✅ MongoDB connected"))
 .catch(err => console.log(err));
 
