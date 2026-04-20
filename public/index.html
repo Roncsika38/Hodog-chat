@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Hodog Chat</title>
+<title>Hodog Ultra Chat</title>
 
 <style>
 body {
@@ -13,12 +13,12 @@ body {
 
 #container {
     display: flex;
-    width: 900px;
-    margin: 50px auto;
+    width: 1000px;
+    margin: 40px auto;
     border: 2px solid lime;
+    box-shadow: 0 0 20px lime;
 }
 
-/* CHAT */
 #chatBox {
     flex: 3;
     border-right: 2px solid lime;
@@ -26,33 +26,29 @@ body {
 }
 
 #messages {
-    height: 300px;
+    height: 350px;
     overflow-y: auto;
     border: 1px solid lime;
     padding: 5px;
     margin: 10px 0;
 }
 
-/* USER LISTA */
 #usersBox {
     flex: 1;
     padding: 10px;
 }
 
-/* INPUT */
 input, button {
     background: black;
     color: lime;
     border: 1px solid lime;
 }
 
-/* ADMIN */
 .admin {
     color: red;
     font-weight: bold;
 }
 
-/* PRIVÁT */
 .private {
     color: orange;
 }
@@ -60,6 +56,10 @@ input, button {
 .time {
     color: gray;
     font-size: 10px;
+}
+
+#typing {
+    color: yellow;
 }
 </style>
 </head>
@@ -69,14 +69,15 @@ input, button {
 <div id="container">
 
 <div id="chatBox">
-    <h2>🔥 HODOG CHAT 🔥</h2>
+    <h2>🔥 HODOG ULTRA 🔥</h2>
 
     <input id="username" placeholder="Név">
     <button onclick="join()">Belépés</button>
 
     <div id="messages"></div>
+    <div id="typing"></div>
 
-    <input id="msg" placeholder="Írj...">
+    <input id="msg" placeholder="Írj..." oninput="typing()">
     <button onclick="send()">Küld</button>
 </div>
 
@@ -87,64 +88,43 @@ input, button {
 
 </div>
 
+<audio id="ping" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
 
 const socket = io();
 let username = "";
 
-/* BELÉPÉS */
 function join() {
     username = document.getElementById("username").value;
     socket.emit("join", username);
 }
 
-/* KÜLDÉS */
 function send() {
     let msg = document.getElementById("msg").value;
     if (!msg) return;
 
-    // PRIVÁT ÜZENET
-    if (msg.startsWith("/w ")) {
-        const parts = msg.split(" ");
-        const target = parts[1];
-        const message = parts.slice(2).join(" ");
-
-        addMessage({
-            username: "(privát) " + username + " → " + target,
-            msg: message,
-            private: true
-        });
-
-        document.getElementById("msg").value = "";
-        return;
-    }
-
-    socket.emit("message", {
-        username,
-        msg
-    });
-
+    socket.emit("message", { username, msg });
     document.getElementById("msg").value = "";
 }
 
-/* ÜZENET MEGJELENÍTÉS */
+function typing() {
+    socket.emit("typing");
+}
+
 function addMessage(data) {
     const div = document.createElement("div");
 
     const time = document.createElement("span");
     time.classList.add("time");
-    time.textContent = "[" + new Date().toLocaleTimeString() + "] ";
+    time.textContent = "[" + data.time + "] ";
 
     const name = document.createElement("span");
     name.textContent = data.username + ": ";
 
     if (data.username === "admin") {
         name.classList.add("admin");
-    }
-
-    if (data.private) {
-        name.classList.add("private");
     }
 
     const text = document.createElement("span");
@@ -156,17 +136,34 @@ function addMessage(data) {
 
     document.getElementById("messages").appendChild(div);
 
-    // AUTO SCROLL
-    const box = document.getElementById("messages");
-    box.scrollTop = box.scrollHeight;
+    document.getElementById("messages").scrollTop =
+        document.getElementById("messages").scrollHeight;
+
+    document.getElementById("ping").play();
 }
 
-/* SOCKET */
-socket.on("message", (data) => {
-    addMessage(data);
+socket.on("message", addMessage);
+
+socket.on("chatHistory", (msgs) => {
+    msgs.forEach(addMessage);
 });
 
-/* USER LISTA */
+socket.on("typing", (user) => {
+    document.getElementById("typing").textContent = user + " ír...";
+    setTimeout(() => {
+        document.getElementById("typing").textContent = "";
+    }, 1000);
+});
+
+socket.on("clearChat", () => {
+    document.getElementById("messages").innerHTML = "";
+});
+
+socket.on("kicked", () => {
+    alert("Kirúgtak!");
+    location.reload();
+});
+
 socket.on("users", (users) => {
     const list = document.getElementById("userList");
     list.innerHTML = "";
