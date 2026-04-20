@@ -1,247 +1,169 @@
 <!DOCTYPE html>
+
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<title>Hodog Pro Engine</title>
+<title>🔥 Hodog Chat PRO</title>
 
 <style>
 body {
-    margin: 0;
-    font-family: Consolas;
-    background: #0d1117;
-    color: #00ff9c;
+  margin: 0;
+  font-family: Arial;
+  background: linear-gradient(135deg, #1e1e2f, #3a0ca3);
+  color: white;
 }
 
-#container {
-    display: flex;
-    height: 100vh;
+#app {
+  display: flex;
+  height: 100vh;
 }
 
-/* CHAT */
-#chat {
-    flex: 3;
-    display: flex;
-    flex-direction: column;
+#chatBox {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
 }
 
 #messages {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
-    font-size: 14px;
+  flex: 1;
+  background: rgba(0,0,0,0.6);
+  padding: 10px;
+  overflow-y: auto;
+  border-radius: 10px;
 }
 
-.msg {
-    margin: 4px 0;
+#inputBar {
+  display: flex;
+  margin-top: 10px;
 }
 
-.time {
-    color: #555;
-    font-size: 11px;
-}
-
-/* INPUT */
-#inputBox {
-    padding: 10px;
-    border-top: 1px solid #222;
-}
-
-textarea {
-    width: 100%;
-    height: 60px;
-    background: #0d1117;
-    color: #00ff9c;
-    border: 1px solid #222;
-}
-
-/* OLDALSÁV */
-#side {
-    flex: 1;
-    background: #010409;
-    border-left: 1px solid #222;
-    padding: 10px;
-}
-
-/* USER */
-.user {
-    padding: 4px;
-    cursor: pointer;
-}
-.user:hover {
-    background: #111;
-}
-
-/* ADMIN */
-.admin {
-    color: #ff4d4d;
-    font-weight: bold;
+#msg {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
 }
 
 button {
-    background: #111;
-    color: #00ff9c;
-    border: 1px solid #333;
-    margin: 2px;
-    padding: 5px;
+  padding: 10px;
+  margin-left: 5px;
+  background: #00ffcc;
+  border: none;
+  cursor: pointer;
+}
+
+#sidebar {
+  flex: 1;
+  background: rgba(0,0,0,0.7);
+  padding: 10px;
+  border-left: 2px solid #00ffcc;
+}
+
+.admin {
+  color: red;
+  font-weight: bold;
+}
+
+.user {
+  color: cyan;
 }
 </style>
+
 </head>
 
 <body>
 
-<div id="container">
+<div id="app">
 
-<div id="chat">
+  <div id="chatBox">
+    <h2>🔥 HODOG CHAT 🔥</h2>
 
-<h3>💻 HODOG ENGINE</h3>
+```
+<input id="username" placeholder="Neved">
+<button onclick="join()">Belépés</button>
 
 <div id="messages"></div>
 
-<div id="inputBox">
-<textarea id="msg" placeholder="Írj..."></textarea>
+<div id="inputBar">
+  <input id="msg" placeholder="Írj valamit...">
+  <button onclick="send()">Küld</button>
 </div>
+```
 
-</div>
+  </div>
 
-<div id="side">
+  <div id="sidebar">
+    <h3>Online</h3>
+    <ul id="userList"></ul>
 
-<h3>⚙️ Beállítás</h3>
-
-<input id="nameInput" placeholder="Név"><br>
-<input type="color" id="colorInput"><br>
-<button onclick="save()">Mentés</button>
-
+```
 <hr>
 
-<h3>👥 Online</h3>
-<div id="users"></div>
+<h3>⚙️ Admin</h3>
+<button onclick="clearChat()">Chat törlés</button>
+```
 
-<hr>
-
-<div id="adminPanel" style="display:none">
-<h3>👑 Admin</h3>
-
-Kiválasztott: <span id="selected">-</span><br>
-
-<button onclick="kick()">Kick</button>
-<button onclick="ban()">Ban</button>
-<button onclick="clearChat()">Clear</button>
-</div>
-
-</div>
+  </div>
 
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+
 <script>
-
 const socket = io();
+let username = "";
 
-let username = localStorage.getItem("name") || "";
-let color = localStorage.getItem("color") || "#00ff9c";
-let selected = "";
+function join() {
+  username = document.getElementById("username").value;
+  socket.emit("join", username);
+}
 
-/* LOAD */
-window.onload = ()=>{
-    nameInput.value = username;
-    colorInput.value = color;
+function send() {
+  const msg = document.getElementById("msg").value;
+  if(!msg) return;
 
-    if(username){
-        socket.emit("join", username);
-        updateMe();
-    }
-};
+  socket.emit("message", { msg });
+  document.getElementById("msg").value = "";
+}
 
-/* ENTER */
-msg.addEventListener("keydown",(e)=>{
-    if(e.key==="Enter" && !e.shiftKey){
-        e.preventDefault();
-        send();
-    }
+// ENTER küldés
+document.getElementById("msg").addEventListener("keypress", function(e) {
+  if(e.key === "Enter") send();
 });
 
-/* SAVE */
-function save(){
-    username = nameInput.value;
-    color = colorInput.value;
+// Üzenet megjelenítés
+socket.on("message", (data) => {
+  const div = document.createElement("div");
 
-    localStorage.setItem("name",username);
-    localStorage.setItem("color",color);
+  div.innerHTML = `
+    <span class="${data.role}">${data.username}</span>:
+    ${data.msg}
+  `;
 
-    socket.emit("join", username);
-    updateMe();
-}
-
-/* ADMIN CHECK */
-function updateMe(){
-    if(username==="roncsika38"){
-        adminPanel.style.display="block";
-    }
-}
-
-/* SEND */
-function send(){
-    let text = msg.value.trim();
-    if(!text) return;
-
-    socket.emit("message",{username,msg:text,color});
-    msg.value="";
-}
-
-/* CHAT */
-socket.on("message",(d)=>{
-    let div=document.createElement("div");
-
-    let style=`color:${d.color || "#fff"}`;
-
-    if(d.username==="roncsika38"){
-        style="color:#ff4d4d;font-weight:bold;";
-    }
-
-    div.innerHTML=`
-    <span class="time">[${d.time}]</span>
-    <span style="${style}">${d.username}:</span>
-    ${d.msg.replace(/\n/g,"<br>")}`;
-
-    messages.appendChild(div);
-    messages.scrollTop=999999;
+  document.getElementById("messages").appendChild(div);
 });
 
-/* USERS */
-socket.on("users",(u)=>{
-    users.innerHTML="";
+// User lista
+socket.on("users", (users) => {
+  const list = document.getElementById("userList");
+  list.innerHTML = "";
 
-    u.forEach(name=>{
-        let div=document.createElement("div");
-        div.className="user";
+  users.forEach(u => {
+    const li = document.createElement("li");
 
-        if(name==="roncsika38"){
-            div.innerHTML="👑 "+name;
-            div.style.color="#ff4d4d";
-        } else {
-            div.textContent=name;
-        }
+    li.innerHTML = u.role === "admin"
+      ? "👑 " + u.name
+      : u.name;
 
-        div.onclick=()=>{
-            selected=name;
-            document.getElementById("selected").innerText=name;
-        };
-
-        users.appendChild(div);
-    });
+    list.appendChild(li);
+  });
 });
 
-/* ADMIN */
-function kick(){
-    socket.emit("message",{msg:"/kick "+selected});
+// Admin funkció
+function clearChat() {
+  document.getElementById("messages").innerHTML = "";
 }
-function ban(){
-    socket.emit("message",{msg:"/ban "+selected});
-}
-function clearChat(){
-    socket.emit("message",{msg:"/clear"});
-}
-
 </script>
 
 </body>
