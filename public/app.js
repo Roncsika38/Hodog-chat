@@ -1,50 +1,70 @@
 const socket = io();
-let user;
+
+let username = "";
 
 function login() {
+  const user = document.getElementById("user").value;
+  const pass = document.getElementById("pass").value;
+
   fetch("/login", {
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      username: user.value,
-      password: pass.value
-    })
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:user,password:pass})
   })
-  .then(r=>r.json())
+  .then(res=>res.json())
   .then(data=>{
-    if(data.error) return alert(data.error);
-
-    user = data;
-    document.getElementById("login").style.display="none";
-    document.getElementById("chat").style.display="flex";
-
-    socket.emit("join", user);
+    if(data.success){
+      username = user;
+      startChat();
+    } else alert(data.error);
   });
 }
 
-function register() {
+function register(){
+  const user = document.getElementById("user").value;
+  const pass = document.getElementById("pass").value;
+
   fetch("/register", {
     method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      username: user.value,
-      password: pass.value
-    })
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:user,password:pass})
+  })
+  .then(res=>res.json())
+  .then(data=>{
+    alert(data.success ? "Siker!" : data.error);
   });
 }
 
-function send() {
-  socket.emit("message", input.value);
-  input.value="";
+function startChat(){
+  document.getElementById("login").style.display="none";
+  document.getElementById("chat").style.display="flex";
+  document.getElementById("username").innerText=username;
+
+  socket.emit("join", username);
 }
 
-socket.on("message", (msg)=>{
-  const li = document.createElement("li");
-  li.innerHTML = msg.username + ": " + msg.text + 
-    ` <button onclick="like('${msg._id}')">👍 ${msg.likes}</button>`;
-  messages.appendChild(li);
+function send(){
+  const msg = document.getElementById("msg").value;
+  socket.emit("message", msg);
+  document.getElementById("msg").value="";
+}
+
+socket.on("message", (data)=>{
+  const div = document.createElement("div");
+  div.className="msg";
+  div.innerText = data.username + ": " + data.text;
+  document.getElementById("messages").appendChild(div);
 });
 
-function like(id){
-  socket.emit("like", id);
+socket.on("loadMessages", (msgs)=>{
+  msgs.forEach(m=>{
+    const div = document.createElement("div");
+    div.className="msg";
+    div.innerText = m.username + ": " + m.text;
+    document.getElementById("messages").appendChild(div);
+  });
+});
+
+function logout(){
+  location.reload();
 }
