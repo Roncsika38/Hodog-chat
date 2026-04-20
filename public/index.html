@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <title>Chat</title>
-
-  <!-- CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<h1>Chat működik 🔥</h1>
+<div id="chat">
+  <div id="messages"></div>
 
-<!-- JS -->
+  <div id="inputArea">
+    <input id="msg" placeholder="Írj üzenetet..." />
+    <button onclick="sendMsg()">Küldés</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
 <script src="app.js"></script>
 
 </body>
