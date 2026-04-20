@@ -2,65 +2,46 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Hodog Ultra Chat</title>
+<title>Bázis Chat Admin</title>
 
 <style>
 body {
     background: black;
-    color: lime;
-    font-family: monospace;
+    color: #00ff00;
+    font-family: Courier New;
 }
 
 #container {
     display: flex;
-    width: 1000px;
-    margin: 40px auto;
-    border: 2px solid lime;
-    box-shadow: 0 0 20px lime;
+    width: 800px;
+    margin: auto;
 }
 
-#chatBox {
+#chat {
     flex: 3;
-    border-right: 2px solid lime;
-    padding: 10px;
 }
 
 #messages {
-    height: 350px;
+    height: 300px;
     overflow-y: auto;
-    border: 1px solid lime;
-    padding: 5px;
+    border: 1px solid #00ff00;
     margin: 10px 0;
 }
 
-#usersBox {
+#panel {
     flex: 1;
-    padding: 10px;
+    border-left: 1px solid #00ff00;
+    padding-left: 10px;
 }
 
 input, button {
     background: black;
-    color: lime;
-    border: 1px solid lime;
+    color: #00ff00;
+    border: 1px solid #00ff00;
+    margin: 2px;
 }
 
-.admin {
-    color: red;
-    font-weight: bold;
-}
-
-.private {
-    color: orange;
-}
-
-.time {
-    color: gray;
-    font-size: 10px;
-}
-
-#typing {
-    color: yellow;
-}
+.admin { color: red; }
 </style>
 </head>
 
@@ -68,27 +49,35 @@ input, button {
 
 <div id="container">
 
-<div id="chatBox">
-    <h2>🔥 HODOG ULTRA 🔥</h2>
+<div id="chat">
+<b>Bázis Chat</b><br>
 
-    <input id="username" placeholder="Név">
-    <button onclick="join()">Belépés</button>
+<input id="username">
+<button onclick="join()">Belép</button>
 
-    <div id="messages"></div>
-    <div id="typing"></div>
+<div id="messages"></div>
 
-    <input id="msg" placeholder="Írj..." oninput="typing()">
-    <button onclick="send()">Küld</button>
+<input id="msg">
+<button onclick="send()">Küld</button>
 </div>
 
-<div id="usersBox">
-    <h3>Online</h3>
-    <ul id="userList"></ul>
-</div>
+<div id="panel">
+<b>Admin Panel</b><br>
+
+<select id="userSelect"></select><br>
+
+<button onclick="kick()">Kick</button>
+<button onclick="ban()">Ban</button>
+<button onclick="clearChat()">Clear</button>
+
+<hr>
+
+<b>Online:</b>
+<ul id="users"></ul>
 
 </div>
 
-<audio id="ping" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -103,60 +92,65 @@ function join() {
 
 function send() {
     let msg = document.getElementById("msg").value;
-    if (!msg) return;
-
     socket.emit("message", { username, msg });
     document.getElementById("msg").value = "";
 }
 
-function typing() {
-    socket.emit("typing");
+function kick() {
+    let u = document.getElementById("userSelect").value;
+    socket.emit("message", { msg: "/kick " + u });
+}
+
+function ban() {
+    let u = document.getElementById("userSelect").value;
+    socket.emit("message", { msg: "/ban " + u });
+}
+
+function clearChat() {
+    socket.emit("message", { msg: "/clear" });
 }
 
 function addMessage(data) {
-    const div = document.createElement("div");
+    let div = document.createElement("div");
 
-    const time = document.createElement("span");
-    time.classList.add("time");
-    time.textContent = "[" + data.time + "] ";
+    let name = document.createElement("span");
 
-    const name = document.createElement("span");
-    name.textContent = data.username + ": ";
-
-    if (data.username === "admin") {
-        name.classList.add("admin");
+    if (data.username === "roncsika38") {
+        name.className = "admin";
     }
 
-    const text = document.createElement("span");
+    name.textContent = "[" + data.time + "] " + data.username + ": ";
+
+    let text = document.createElement("span");
     text.textContent = data.msg;
 
-    div.appendChild(time);
     div.appendChild(name);
     div.appendChild(text);
 
     document.getElementById("messages").appendChild(div);
-
-    document.getElementById("messages").scrollTop =
-        document.getElementById("messages").scrollHeight;
-
-    document.getElementById("ping").play();
 }
 
 socket.on("message", addMessage);
 
-socket.on("chatHistory", (msgs) => {
-    msgs.forEach(addMessage);
-});
+socket.on("chatHistory", msgs => msgs.forEach(addMessage));
 
-socket.on("typing", (user) => {
-    document.getElementById("typing").textContent = user + " ír...";
-    setTimeout(() => {
-        document.getElementById("typing").textContent = "";
-    }, 1000);
-});
+socket.on("users", (users) => {
+    let list = document.getElementById("users");
+    let select = document.getElementById("userSelect");
 
-socket.on("clearChat", () => {
-    document.getElementById("messages").innerHTML = "";
+    list.innerHTML = "";
+    select.innerHTML = "";
+
+    users.forEach(u => {
+        let li = document.createElement("li");
+        li.textContent = u;
+        list.appendChild(li);
+
+        let opt = document.createElement("option");
+        opt.value = u;
+        opt.textContent = u;
+        select.appendChild(opt);
+    });
 });
 
 socket.on("kicked", () => {
@@ -164,22 +158,13 @@ socket.on("kicked", () => {
     location.reload();
 });
 
-socket.on("users", (users) => {
-    const list = document.getElementById("userList");
-    list.innerHTML = "";
+socket.on("banned", () => {
+    alert("Kitiltva!");
+    location.reload();
+});
 
-    users.forEach(u => {
-        const li = document.createElement("li");
-
-        if (u === "admin") {
-            li.innerHTML = "👑 " + u;
-            li.style.color = "red";
-        } else {
-            li.textContent = u;
-        }
-
-        list.appendChild(li);
-    });
+socket.on("clearChat", () => {
+    document.getElementById("messages").innerHTML = "";
 });
 
 </script>
