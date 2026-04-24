@@ -18,13 +18,14 @@ io.on("connection", (socket) => {
       socket.emit("banned");
       return;
     }
+
     socket.username = username;
     io.emit("chat message", `${username} csatlakozott`);
   });
 
   socket.on("chat message", (msg) => {
     io.emit("chat message", {
-      user: socket.username,
+      user: socket.username || "Ismeretlen",
       text: msg,
       id: Date.now()
     });
@@ -40,6 +41,9 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server fut");
+// 🔥 EZ A FONTOS RÉSZ (Render fix)
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log("Server fut a porton:", PORT);
 });
