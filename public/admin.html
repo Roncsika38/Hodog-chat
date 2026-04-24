@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Panel</title>
+</head>
+<body>
+  <h1>Admin Panel</h1>
+
+  <input id="banUser" placeholder="Felhasználó neve">
+  <button onclick="ban()">Ban</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    function ban() {
+      const user = document.getElementById("banUser").value;
+      socket.emit("ban user", user);
+    }
+  </script>
+</body>
+</html>
