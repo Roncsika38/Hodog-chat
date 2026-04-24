@@ -1,31 +1,45 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// 🔥 static fájlok (public mappa)
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static("public"));
 
-// 🔥 amikor valaki csatlakozik
+let bannedUsers = [];
+
 io.on("connection", (socket) => {
-  console.log("Felhasználó csatlakozott");
+  console.log("user connected");
 
-  // üzenet fogadás
-  socket.on("chat message", (msg) => {
-    io.emit("chat message", msg); // mindenki megkapja
+  socket.on("join", (username) => {
+    if (bannedUsers.includes(username)) {
+      socket.emit("banned");
+      return;
+    }
+    socket.username = username;
+    io.emit("chat message", `${username} csatlakozott`);
   });
 
-  socket.on("disconnect", () => {
-    console.log("Felhasználó kilépett");
+  socket.on("chat message", (msg) => {
+    io.emit("chat message", {
+      user: socket.username,
+      text: msg,
+      id: Date.now()
+    });
+  });
+
+  socket.on("delete message", (id) => {
+    io.emit("delete message", id);
+  });
+
+  socket.on("ban user", (username) => {
+    bannedUsers.push(username);
+    io.emit("chat message", `${username} kitiltva`);
   });
 });
 
-// 🔥 szerver indítás
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log("Server fut: " + PORT);
+server.listen(3000, () => {
+  console.log("Server fut");
 });
