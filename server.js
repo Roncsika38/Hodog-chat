@@ -20,7 +20,12 @@ io.on("connection", (socket) => {
     }
 
     socket.username = username;
-    io.emit("chat message", `${username} csatlakozott`);
+
+    io.emit("chat message", {
+      user: "SYSTEM",
+      text: username + " csatlakozott",
+      id: Date.now()
+    });
   });
 
   socket.on("chat message", (msg) => {
@@ -37,16 +42,18 @@ io.on("connection", (socket) => {
 
   socket.on("ban user", (username) => {
     bannedUsers.push(username);
-    io.emit("chat message", `${username} kitiltva`);
+
+    io.emit("chat message", {
+      user: "SYSTEM",
+      text: username + " kitiltva",
+      id: Date.now()
+    });
   });
 });
 
-// 🔥 EZ A FONTOS RÉSZ (Render fix)
+// ✅ CSAK EZ MARAD
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log("Server fut a porton:", PORT);
-});
-server.listen(3000, () => {
-  console.log("Server fut a 3000-es porton");
 });
