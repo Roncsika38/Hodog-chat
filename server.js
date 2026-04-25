@@ -1,14 +1,24 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// 🔥 FONTOS: Render port
+const PORT = process.env.PORT || 3000;
+
 const ADMIN_PASSWORD = "1234";
 
-app.use(express.static(__dirname));
+// ✅ STATIC MAPPa javítva
+app.use(express.static(path.join(__dirname, "public")));
+
+// ✅ FŐOLDAL FIX (Cannot GET / megoldva)
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 io.on("connection", (socket) => {
 
@@ -55,6 +65,7 @@ io.on("connection", (socket) => {
 
 });
 
-server.listen(3000, () => {
-  console.log("Server fut: http://localhost:3000");
+// ✅ Render kompatibilis indítás
+server.listen(PORT, () => {
+  console.log("Server fut a porton:", PORT);
 });
