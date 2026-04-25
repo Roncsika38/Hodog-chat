@@ -1,71 +1,78 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
+const bodyParser = require("body-parser");
+const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { cors: { origin: "*" } });
 
-// 🔥 FONTOS: Render port
-const PORT = process.env.PORT || 3000;
+app.use(cors());
+app.use(bodyParser.json());
 
-const ADMIN_PASSWORD = "1234";
+let users = [];
+let rooms = ["general"];
 
-// ✅ STATIC MAPPa javítva
-app.use(express.static(path.join(__dirname, "public")));
+// ===== LOGIN / REGISTER =====
+app.post("/register", (req, res) => {
+  const { username, password } = req.body;
 
-// ✅ FŐOLDAL FIX (Cannot GET / megoldva)
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  if (users.find(u => u.username === username)) {
+    return res.json({ success: false, msg: "User exists" });
+  }
+
+  const isAdmin = username === "admin";
+
+  users.push({ username, password, isAdmin });
+  res.json({ success: true });
 });
 
-io.on("connection", (socket) => {
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
 
-  socket.on("join", ({ username, password }) => {
-    socket.username = username || "Anon";
-    socket.isAdmin = password === ADMIN_PASSWORD;
+  const user = users.find(
+    u => u.username === username && u.password === password
+  );
 
-    socket.emit("isAdmin", socket.isAdmin);
+  if (!user) return res.json({ success: false });
 
-    io.emit("message", {
-      user: "SYSTEM",
-      text: `${socket.username} csatlakozott`
-    });
-  });
-
-  socket.on("message", (text) => {
-    io.emit("message", {
-      user: socket.username,
-      text
-    });
-  });
-
-  socket.on("kick", (id) => {
-    if (!socket.isAdmin) return;
-
-    const target = io.sockets.sockets.get(id);
-    if (target) {
-      io.emit("message", {
-        user: "ADMIN",
-        text: `${target.username} ki lett rúgva`
-      });
-      target.disconnect();
-    }
-  });
-
-  socket.on("disconnect", () => {
-    if (socket.username) {
-      io.emit("message", {
-        user: "SYSTEM",
-        text: `${socket.username} kilépett`
-      });
-    }
-  });
-
+  res.json({ success: true, isAdmin: user.isAdmin });
 });
 
-// ✅ Render kompatibilis indítás
-server.listen(PORT, () => {
-  console.log("Server fut a porton:", PORT);
+// ===== ADMIN: CREATE ROOM =====
+app.post("/create-room", (req, res) => {
+  const { room, username } = req.body;
+
+  const user = users.find(u => u.username === username);
+
+  if (!user || !user.isAdmin) {
+    return res.json({ success: false, msg: "No permission" });
+  }
+
+  if (!rooms.includes(room)) {
+    rooms.push(room);
+  }
+
+  res.json({ success: true, rooms });
+});
+
+// ===== GET ROOMS =====
+app.get("/rooms", (req, res) => {
+  res.json(rooms);
+});
+
+// ===== SOCKET CHAT =====
+io.on("connection", socket => {
+  socket.on("join", room => {
+    socket.join(room);
+  });
+
+  socket.on("message", ({ room, msg, user }) => {
+    io.to(room).emit("message", { user, msg });
+  });
+});
+
+server.listen(3000, () => {
+  console.log("Server fut: http://localhost:3000");
 });
