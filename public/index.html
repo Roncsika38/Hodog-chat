@@ -2,104 +2,54 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<title>Chat</title>
+<title>Chat Pro</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: "Segoe UI", sans-serif;
-  background: #f5f7fb;
-}
+body { margin:0; font-family:Arial; background:#f4f6f9; }
 
-/* LOGIN */
 #login {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display:flex; height:100vh; justify-content:center; align-items:center;
 }
 
-.login-box {
-  background: white;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+.box {
+  background:white; padding:25px; border-radius:10px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.1);
 }
 
-input {
-  padding: 12px;
-  margin: 5px 0;
-  width: 220px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-button {
-  padding: 12px;
-  border: none;
-  background: #4CAF50;
-  color: white;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-/* CHAT */
-#chat {
-  display: none;
-  height: 100vh;
-  display: flex;
-}
+#chat { display:none; height:100vh; }
 
 .sidebar {
-  width: 220px;
-  background: white;
-  border-right: 1px solid #ddd;
-  padding: 10px;
-}
-
-.sidebar h3 {
-  margin-top: 0;
+  width:250px; background:white; border-right:1px solid #ddd;
+  padding:10px;
 }
 
 .user {
-  padding: 8px;
-  border-radius: 6px;
+  display:flex; align-items:center; margin:5px 0;
 }
 
-.user:hover {
-  background: #eee;
+.user img {
+  width:30px; height:30px; border-radius:50%; margin-right:10px;
 }
 
-.main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
+.main { flex:1; display:flex; flex-direction:column; }
 
-#messages {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
-}
+#messages { flex:1; padding:10px; overflow:auto; }
 
 .msg {
-  margin-bottom: 10px;
+  display:flex; margin-bottom:10px;
 }
 
-.msg span {
-  font-weight: bold;
+.msg img {
+  width:35px; height:35px; border-radius:50%; margin-right:10px;
 }
 
-.input-area {
-  display: flex;
-  padding: 10px;
-  background: white;
-  border-top: 1px solid #ddd;
+.input { display:flex; padding:10px; background:white; }
+
+input, button {
+  padding:10px; margin:5px; border-radius:6px; border:1px solid #ccc;
 }
 
-.input-area input {
-  flex: 1;
-}
+button { background:#4CAF50; color:white; cursor:pointer; }
 
 </style>
 </head>
@@ -107,15 +57,19 @@ button {
 <body>
 
 <div id="login">
-  <div class="login-box">
+  <div class="box">
     <h2>Belépés</h2>
-    <input id="username" placeholder="Felhasználónév">
-    <br>
-    <button id="loginBtn">Belépés</button>
+
+    <input id="username" placeholder="Név"><br>
+    <input id="room" placeholder="Szoba (pl: lobby)"><br>
+
+    <input type="file" id="avatar"><br>
+
+    <button onclick="join()">Belépés</button>
   </div>
 </div>
 
-<div id="chat">
+<div id="chat" style="display:flex;">
   <div class="sidebar">
     <h3>Felhasználók</h3>
     <div id="users"></div>
@@ -124,9 +78,9 @@ button {
   <div class="main">
     <div id="messages"></div>
 
-    <div class="input-area">
-      <input id="msg" placeholder="Írj üzenetet...">
-      <button id="sendBtn">Küld</button>
+    <div class="input">
+      <input id="msg" placeholder="Üzenet...">
+      <button onclick="send()">Küld</button>
     </div>
   </div>
 </div>
@@ -135,29 +89,37 @@ button {
 <script>
 const socket = io();
 
-const login = document.getElementById("login");
-const chat = document.getElementById("chat");
+let avatarBase64 = "";
 
-document.getElementById("loginBtn").onclick = () => {
-  const name = document.getElementById("username").value.trim();
-  if (!name) return alert("Adj meg nevet!");
+document.getElementById("avatar").addEventListener("change", function() {
+  const file = this.files[0];
+  const reader = new FileReader();
 
-  socket.emit("join", name);
+  reader.onload = () => {
+    avatarBase64 = reader.result;
+  };
 
-  login.style.display = "none";
-  chat.style.display = "flex";
-};
-
-document.getElementById("sendBtn").onclick = send;
-
-document.getElementById("msg").addEventListener("keypress", (e) => {
-  if (e.key === "Enter") send();
+  if (file) reader.readAsDataURL(file);
 });
+
+function join() {
+  const username = document.getElementById("username").value;
+  const room = document.getElementById("room").value || "lobby";
+
+  if (!username) return alert("Adj meg nevet!");
+
+  socket.emit("join", {
+    username,
+    room,
+    avatar: avatarBase64 || "https://via.placeholder.com/40"
+  });
+
+  document.getElementById("login").style.display = "none";
+  document.getElementById("chat").style.display = "flex";
+}
 
 function send() {
   const msg = document.getElementById("msg").value;
-  if (!msg) return;
-
   socket.emit("chatMessage", msg);
   document.getElementById("msg").value = "";
 }
@@ -166,7 +128,10 @@ socket.on("message", (data) => {
   const div = document.createElement("div");
   div.className = "msg";
 
-  div.innerHTML = `<span>${data.user}:</span> ${data.text}`;
+  div.innerHTML = `
+    <img src="${data.avatar || "https://via.placeholder.com/40"}">
+    <div><b>${data.user}</b><br>${data.text}</div>
+  `;
 
   document.getElementById("messages").appendChild(div);
 });
@@ -178,13 +143,11 @@ socket.on("userList", (list) => {
   list.forEach(u => {
     const div = document.createElement("div");
     div.className = "user";
-    div.textContent = u;
 
-    div.onclick = () => {
-      if (confirm("Kick? " + u)) {
-        socket.emit("kickUser", u);
-      }
-    };
+    div.innerHTML = `
+      <img src="${u.avatar}">
+      ${u.name}
+    `;
 
     usersDiv.appendChild(div);
   });
