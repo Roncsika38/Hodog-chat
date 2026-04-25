@@ -1,22 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Panel</title>
+<meta charset="UTF-8">
+<title>Admin</title>
 </head>
 <body>
-  <h1>Admin Panel</h1>
 
-  <input id="banUser" placeholder="Felhasználó neve">
-  <button onclick="ban()">Ban</button>
+<h2>Admin panel</h2>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
+<input id="kickName" placeholder="Felhasználó">
+<button onclick="kick()">Kick</button>
 
-    function ban() {
-      const user = document.getElementById("banUser").value;
-      socket.emit("ban user", user);
-    }
-  </script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+function kick() {
+  const name = document.getElementById("kickName").value;
+  socket.emit("kickUser", name);
+}
+</script>
+
 </body>
 </html>
