@@ -3,24 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <title>Chat</title>
-  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div id="login">
-  <input id="username" placeholder="Neved">
-  <button onclick="login()">Belépés</button>
+  <input id="username" placeholder="Név">
+  <button id="loginBtn">Belépés</button>
 </div>
 
-<div id="chat" class="hidden">
+<div id="chat" style="display:none;">
   <div id="messages"></div>
-
-  <div class="input-area">
-    <input id="messageInput" placeholder="Írj üzenetet...">
-    <button onclick="sendMessage()">Küldés</button>
-  </div>
+  <input id="msg" placeholder="Üzenet">
+  <button id="sendBtn">Küldés</button>
 </div>
 
-<script type="module" src="app.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  const loginDiv = document.getElementById("login");
+  const chatDiv = document.getElementById("chat");
+
+  document.getElementById("loginBtn").onclick = () => {
+    const username = document.getElementById("username").value;
+
+    if (!username) {
+      alert("Adj meg nevet!");
+      return;
+    }
+
+    socket.emit("join", username);
+
+    loginDiv.style.display = "none";
+    chatDiv.style.display = "block";
+  };
+
+  document.getElementById("sendBtn").onclick = () => {
+    const msg = document.getElementById("msg").value;
+    socket.emit("chatMessage", msg);
+    document.getElementById("msg").value = "";
+  };
+
+  socket.on("message", (msg) => {
+    const div = document.createElement("div");
+    div.textContent = msg;
+    document.getElementById("messages").appendChild(div);
+  });
+</script>
+
 </body>
 </html>
