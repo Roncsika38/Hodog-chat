@@ -1,113 +1,116 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Retro Chat</title>
-
-<style>
-body {
-  background: black;
-  color: #00ff00;
-  font-family: "Courier New", monospace;
-}
-
-#messages {
-  border: 1px solid #00ff00;
-  height: 400px;
-  overflow-y: auto;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-
-input, button {
-  background: black;
-  color: #00ff00;
-  border: 1px solid #00ff00;
-  font-family: inherit;
-}
-
-button:hover {
-  background: #003300;
-  cursor: pointer;
-}
-
-.admin {
-  color: red;
-}
-</style>
+  <title>Chat</title>
 </head>
-
 <body>
 
-<h2>RETRO CHAT</h2>
+<h2>Login / Register</h2>
+<input id="user" placeholder="username">
+<input id="pass" placeholder="password" type="password">
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
 
-<input id="username" placeholder="Név">
-<input id="password" placeholder="Admin jelszó">
-<button onclick="join()">Belépés</button>
+<h2>Admin Panel</h2>
+<input id="roomName" placeholder="room name">
+<button onclick="createRoom()">Create Room</button>
 
-<div id="messages"></div>
+<h2>Chat</h2>
+<select id="rooms"></select>
+<input id="msg">
+<button onclick="send()">Send</button>
 
-<input id="messageInput" placeholder="Üzenet">
-<button onclick="sendMessage()">Küldés</button>
+<ul id="chat"></ul>
 
-<div id="adminPanel" style="display:none;">
-  <h3>ADMIN PANEL</h3>
-  <input id="kickId" placeholder="Socket ID">
-  <button onclick="kickUser()">Kick</button>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-const socket = io();
+const socket = io("http://localhost:3000");
 
-const messages = document.getElementById("messages");
-const input = document.getElementById("messageInput");
+let currentUser = "";
+let isAdmin = false;
 
-function join() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
-  socket.emit("join", { username, password });
+async function register() {
+  await fetch("http://localhost:3000/register", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      username: user.value,
+      password: pass.value
+    })
+  });
+  alert("Regisztrálva");
 }
 
-function sendMessage() {
-  const text = input.value.trim();
-  if (!text) return;
+async function login() {
+  const res = await fetch("http://localhost:3000/login", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      username: user.value,
+      password: pass.value
+    })
+  });
 
-  socket.emit("message", text);
-  input.value = "";
+  const data = await res.json();
+
+  if (data.success) {
+    currentUser = user.value;
+    isAdmin = data.isAdmin;
+    loadRooms();
+    alert("Belépve");
+  } else {
+    alert("Hibás login");
+  }
 }
 
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    sendMessage();
-  }
-});
+async function loadRooms() {
+  const res = await fetch("http://localhost:3000/rooms");
+  const data = await res.json();
 
-socket.on("message", (msg) => {
-  const div = document.createElement("div");
-
-  if (msg.user === "ADMIN") {
-    div.classList.add("admin");
-  }
-
-  div.textContent = `[${msg.user}] > ${msg.text}`;
-  messages.appendChild(div);
-
-  messages.scrollTop = messages.scrollHeight;
-});
-
-socket.on("isAdmin", (isAdmin) => {
-  if (isAdmin) {
-    document.getElementById("adminPanel").style.display = "block";
-  }
-});
-
-function kickUser() {
-  const id = document.getElementById("kickId").value;
-  socket.emit("kick", id);
+  rooms.innerHTML = "";
+  data.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r;
+    opt.text = r;
+    rooms.appendChild(opt);
+  });
 }
+
+async function createRoom() {
+  const res = await fetch("http://localhost:3000/create-room", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      room: roomName.value,
+      username: currentUser
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    loadRooms();
+    alert("Szoba létrehozva");
+  } else {
+    alert("Nincs jogod");
+  }
+}
+
+function send() {
+  const room = rooms.value;
+  socket.emit("join", room);
+  socket.emit("message", {
+    room,
+    msg: msg.value,
+    user: currentUser
+  });
+}
+
+socket.on("message", data => {
+  const li = document.createElement("li");
+  li.innerText = data.user + ": " + data.msg;
+  chat.appendChild(li);
+});
 </script>
 
 </body>
