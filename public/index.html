@@ -1,156 +1,47 @@
 <!DOCTYPE html>
-<html lang="hu">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Chat Pro</title>
-
-<style>
-body { margin:0; font-family:Arial; background:#f4f6f9; }
-
-#login {
-  display:flex; height:100vh; justify-content:center; align-items:center;
-}
-
-.box {
-  background:white; padding:25px; border-radius:10px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.1);
-}
-
-#chat { display:none; height:100vh; }
-
-.sidebar {
-  width:250px; background:white; border-right:1px solid #ddd;
-  padding:10px;
-}
-
-.user {
-  display:flex; align-items:center; margin:5px 0;
-}
-
-.user img {
-  width:30px; height:30px; border-radius:50%; margin-right:10px;
-}
-
-.main { flex:1; display:flex; flex-direction:column; }
-
-#messages { flex:1; padding:10px; overflow:auto; }
-
-.msg {
-  display:flex; margin-bottom:10px;
-}
-
-.msg img {
-  width:35px; height:35px; border-radius:50%; margin-right:10px;
-}
-
-.input { display:flex; padding:10px; background:white; }
-
-input, button {
-  padding:10px; margin:5px; border-radius:6px; border:1px solid #ccc;
-}
-
-button { background:#4CAF50; color:white; cursor:pointer; }
-
-</style>
+  <title>Chat szobák</title>
+  <style>
+    body { font-family: Arial; }
+    #chat { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; }
+  </style>
 </head>
-
 <body>
 
-<div id="login">
-  <div class="box">
-    <h2>Belépés</h2>
+<h2>Chat szobák</h2>
 
-    <input id="username" placeholder="Név"><br>
-    <input id="room" placeholder="Szoba (pl: lobby)"><br>
+<input id="room" placeholder="Szoba neve" />
+<button onclick="joinRoom()">Belépés / létrehozás</button>
 
-    <input type="file" id="avatar"><br>
+<hr>
 
-    <button onclick="join()">Belépés</button>
-  </div>
-</div>
+<div id="chat"></div>
 
-<div id="chat" style="display:flex;">
-  <div class="sidebar">
-    <h3>Felhasználók</h3>
-    <div id="users"></div>
-  </div>
-
-  <div class="main">
-    <div id="messages"></div>
-
-    <div class="input">
-      <input id="msg" placeholder="Üzenet...">
-      <button onclick="send()">Küld</button>
-    </div>
-  </div>
-</div>
+<input id="msg" placeholder="Üzenet..." />
+<button onclick="sendMsg()">Küldés</button>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
+let currentRoom = "";
 
-let avatarBase64 = "";
-
-document.getElementById("avatar").addEventListener("change", function() {
-  const file = this.files[0];
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    avatarBase64 = reader.result;
-  };
-
-  if (file) reader.readAsDataURL(file);
-});
-
-function join() {
-  const username = document.getElementById("username").value;
-  const room = document.getElementById("room").value || "lobby";
-
-  if (!username) return alert("Adj meg nevet!");
-
-  socket.emit("join", {
-    username,
-    room,
-    avatar: avatarBase64 || "https://via.placeholder.com/40"
-  });
-
-  document.getElementById("login").style.display = "none";
-  document.getElementById("chat").style.display = "flex";
+function joinRoom() {
+  const room = document.getElementById("room").value;
+  currentRoom = room;
+  socket.emit("joinRoom", room);
+  document.getElementById("chat").innerHTML = "";
 }
 
-function send() {
-  const msg = document.getElementById("msg").value;
-  socket.emit("chatMessage", msg);
-  document.getElementById("msg").value = "";
+function sendMsg() {
+  const text = document.getElementById("msg").value;
+  socket.emit("message", { room: currentRoom, text });
 }
 
 socket.on("message", (data) => {
   const div = document.createElement("div");
-  div.className = "msg";
-
-  div.innerHTML = `
-    <img src="${data.avatar || "https://via.placeholder.com/40"}">
-    <div><b>${data.user}</b><br>${data.text}</div>
-  `;
-
-  document.getElementById("messages").appendChild(div);
-});
-
-socket.on("userList", (list) => {
-  const usersDiv = document.getElementById("users");
-  usersDiv.innerHTML = "";
-
-  list.forEach(u => {
-    const div = document.createElement("div");
-    div.className = "user";
-
-    div.innerHTML = `
-      <img src="${u.avatar}">
-      ${u.name}
-    `;
-
-    usersDiv.appendChild(div);
-  });
+  div.textContent = data.id + ": " + data.text;
+  document.getElementById("chat").appendChild(div);
 });
 </script>
 
