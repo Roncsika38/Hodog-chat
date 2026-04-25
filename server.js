@@ -9,52 +9,61 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 let users = {};
+let rooms = {};
 
 io.on("connection", (socket) => {
 
-  socket.on("join", (username) => {
+  socket.on("join", ({ username, room, avatar }) => {
     socket.username = username;
-    users[socket.id] = username;
+    socket.room = room;
+    socket.avatar = avatar;
 
-    io.emit("message", {
+    socket.join(room);
+
+    users[socket.id] = {
+      name: username,
+      room,
+      avatar
+    };
+
+    if (!rooms[room]) rooms[room] = [];
+
+    io.to(room).emit("message", {
       user: "SYSTEM",
-      text: username + " csatlakozott"
+      text: username + " belépett a szobába"
     });
 
-    io.emit("userList", Object.values(users));
+    updateUsers(room);
   });
 
   socket.on("chatMessage", (msg) => {
-    if (socket.username) {
-      io.emit("message", {
-        user: socket.username,
-        text: msg
-      });
-    }
-  });
+    if (!socket.username) return;
 
-  socket.on("kickUser", (name) => {
-    for (let id in users) {
-      if (users[id] === name) {
-        io.sockets.sockets.get(id)?.disconnect();
-      }
-    }
+    io.to(socket.room).emit("message", {
+      user: socket.username,
+      text: msg,
+      avatar: socket.avatar
+    });
   });
 
   socket.on("disconnect", () => {
-    if (socket.username) {
-      delete users[socket.id];
+    const user = users[socket.id];
+    if (!user) return;
 
-      io.emit("message", {
-        user: "SYSTEM",
-        text: socket.username + " kilépett"
-      });
+    io.to(user.room).emit("message", {
+      user: "SYSTEM",
+      text: user.name + " kilépett"
+    });
 
-      io.emit("userList", Object.values(users));
-    }
+    delete users[socket.id];
+    updateUsers(user.room);
   });
 
+  function updateUsers(room) {
+    const list = Object.values(users).filter(u => u.room === room);
+    io.to(room).emit("userList", list);
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server fut:", PORT));
+server.listen(PORT, () => console.log("Fut:", PORT));
