@@ -6,33 +6,55 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// fontos!
 app.use(express.static("public"));
 
+let users = {};
+
 io.on("connection", (socket) => {
-  console.log("User connected");
 
   socket.on("join", (username) => {
     socket.username = username;
-    io.emit("message", username + " csatlakozott");
+    users[socket.id] = username;
+
+    io.emit("message", {
+      user: "SYSTEM",
+      text: username + " csatlakozott"
+    });
+
+    io.emit("userList", Object.values(users));
   });
 
   socket.on("chatMessage", (msg) => {
     if (socket.username) {
-      io.emit("message", socket.username + ": " + msg);
+      io.emit("message", {
+        user: socket.username,
+        text: msg
+      });
+    }
+  });
+
+  socket.on("kickUser", (name) => {
+    for (let id in users) {
+      if (users[id] === name) {
+        io.sockets.sockets.get(id)?.disconnect();
+      }
     }
   });
 
   socket.on("disconnect", () => {
     if (socket.username) {
-      io.emit("message", socket.username + " kilépett");
+      delete users[socket.id];
+
+      io.emit("message", {
+        user: "SYSTEM",
+        text: socket.username + " kilépett"
+      });
+
+      io.emit("userList", Object.values(users));
     }
   });
+
 });
 
-// 🔥 EZ A LÉNYEG (Render kompatibilis)
 const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-  console.log("Server fut: " + PORT);
-});
+server.listen(PORT, () => console.log("Server fut:", PORT));
