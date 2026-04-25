@@ -1,95 +1,194 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: #0b1b3a;
-      color: white;
-      text-align: center;
-    }
+<meta charset="UTF-8">
+<title>Chat</title>
 
-    #chat {
-      display: none;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: #f5f7fb;
+}
 
-    #messages {
-      height: 300px;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      margin: 10px;
-      padding: 10px;
-      background: #111;
-    }
+/* LOGIN */
+#login {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-    input {
-      padding: 10px;
-      margin: 5px;
-      width: 200px;
-    }
+.login-box {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
 
-    button {
-      padding: 10px;
-      cursor: pointer;
-    }
-  </style>
+input {
+  padding: 12px;
+  margin: 5px 0;
+  width: 220px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+button {
+  padding: 12px;
+  border: none;
+  background: #4CAF50;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* CHAT */
+#chat {
+  display: none;
+  height: 100vh;
+  display: flex;
+}
+
+.sidebar {
+  width: 220px;
+  background: white;
+  border-right: 1px solid #ddd;
+  padding: 10px;
+}
+
+.sidebar h3 {
+  margin-top: 0;
+}
+
+.user {
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.user:hover {
+  background: #eee;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.msg {
+  margin-bottom: 10px;
+}
+
+.msg span {
+  font-weight: bold;
+}
+
+.input-area {
+  display: flex;
+  padding: 10px;
+  background: white;
+  border-top: 1px solid #ddd;
+}
+
+.input-area input {
+  flex: 1;
+}
+
+</style>
 </head>
+
 <body>
 
-<h2>Chat</h2>
-
 <div id="login">
-  <input id="username" placeholder="Név">
-  <button id="loginBtn">Belépés</button>
+  <div class="login-box">
+    <h2>Belépés</h2>
+    <input id="username" placeholder="Felhasználónév">
+    <br>
+    <button id="loginBtn">Belépés</button>
+  </div>
 </div>
 
 <div id="chat">
-  <div id="messages"></div>
-  <input id="msg" placeholder="Üzenet">
-  <button id="sendBtn">Küldés</button>
+  <div class="sidebar">
+    <h3>Felhasználók</h3>
+    <div id="users"></div>
+  </div>
+
+  <div class="main">
+    <div id="messages"></div>
+
+    <div class="input-area">
+      <input id="msg" placeholder="Írj üzenetet...">
+      <button id="sendBtn">Küld</button>
+    </div>
+  </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  const socket = io();
+const socket = io();
 
-  const loginDiv = document.getElementById("login");
-  const chatDiv = document.getElementById("chat");
+const login = document.getElementById("login");
+const chat = document.getElementById("chat");
 
-  document.getElementById("loginBtn").onclick = () => {
-    const username = document.getElementById("username").value.trim();
+document.getElementById("loginBtn").onclick = () => {
+  const name = document.getElementById("username").value.trim();
+  if (!name) return alert("Adj meg nevet!");
 
-    if (!username) {
-      alert("Adj meg nevet!");
-      return;
-    }
+  socket.emit("join", name);
 
-    socket.emit("join", username);
+  login.style.display = "none";
+  chat.style.display = "flex";
+};
 
-    loginDiv.style.display = "none";
-    chatDiv.style.display = "block";
-  };
+document.getElementById("sendBtn").onclick = send;
 
-  document.getElementById("sendBtn").onclick = () => {
-    const msg = document.getElementById("msg").value.trim();
+document.getElementById("msg").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") send();
+});
 
-    if (!msg) return;
+function send() {
+  const msg = document.getElementById("msg").value;
+  if (!msg) return;
 
-    socket.emit("chatMessage", msg);
-    document.getElementById("msg").value = "";
-  };
+  socket.emit("chatMessage", msg);
+  document.getElementById("msg").value = "";
+}
 
-  socket.on("message", (msg) => {
+socket.on("message", (data) => {
+  const div = document.createElement("div");
+  div.className = "msg";
+
+  div.innerHTML = `<span>${data.user}:</span> ${data.text}`;
+
+  document.getElementById("messages").appendChild(div);
+});
+
+socket.on("userList", (list) => {
+  const usersDiv = document.getElementById("users");
+  usersDiv.innerHTML = "";
+
+  list.forEach(u => {
     const div = document.createElement("div");
-    div.textContent = msg;
-    document.getElementById("messages").appendChild(div);
+    div.className = "user";
+    div.textContent = u;
 
-    // auto scroll
-    document.getElementById("messages").scrollTop =
-      document.getElementById("messages").scrollHeight;
+    div.onclick = () => {
+      if (confirm("Kick? " + u)) {
+        socket.emit("kickUser", u);
+      }
+    };
+
+    usersDiv.appendChild(div);
   });
+});
 </script>
 
 </body>
