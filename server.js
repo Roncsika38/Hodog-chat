@@ -6,6 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// fontos!
 app.use(express.static("public"));
 
 io.on("connection", (socket) => {
@@ -13,20 +14,25 @@ io.on("connection", (socket) => {
 
   socket.on("join", (username) => {
     socket.username = username;
-    io.emit("message", `${username} csatlakozott`);
+    io.emit("message", username + " csatlakozott");
   });
 
   socket.on("chatMessage", (msg) => {
-    io.emit("message", `${socket.username}: ${msg}`);
+    if (socket.username) {
+      io.emit("message", socket.username + ": " + msg);
+    }
   });
 
   socket.on("disconnect", () => {
     if (socket.username) {
-      io.emit("message", `${socket.username} kilépett`);
+      io.emit("message", socket.username + " kilépett");
     }
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server fut: http://localhost:3000");
+// 🔥 EZ A LÉNYEG (Render kompatibilis)
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log("Server fut: " + PORT);
 });
