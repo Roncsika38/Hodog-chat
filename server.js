@@ -8,62 +8,29 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-let users = {};
-let rooms = {};
-
 io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
 
-  socket.on("join", ({ username, room, avatar }) => {
-    socket.username = username;
-    socket.room = room;
-    socket.avatar = avatar;
-
+  // belépés szobába
+  socket.on("joinRoom", (room) => {
     socket.join(room);
-
-    users[socket.id] = {
-      name: username,
-      room,
-      avatar
-    };
-
-    if (!rooms[room]) rooms[room] = [];
-
-    io.to(room).emit("message", {
-      user: "SYSTEM",
-      text: username + " belépett a szobába"
-    });
-
-    updateUsers(room);
+    socket.room = room;
+    console.log(`${socket.id} joined ${room}`);
   });
 
-  socket.on("chatMessage", (msg) => {
-    if (!socket.username) return;
-
-    io.to(socket.room).emit("message", {
-      user: socket.username,
-      text: msg,
-      avatar: socket.avatar
+  // üzenet küldés
+  socket.on("message", ({ room, text }) => {
+    io.to(room).emit("message", {
+      text,
+      id: socket.id,
     });
   });
 
   socket.on("disconnect", () => {
-    const user = users[socket.id];
-    if (!user) return;
-
-    io.to(user.room).emit("message", {
-      user: "SYSTEM",
-      text: user.name + " kilépett"
-    });
-
-    delete users[socket.id];
-    updateUsers(user.room);
+    console.log("User disconnected:", socket.id);
   });
-
-  function updateUsers(room) {
-    const list = Object.values(users).filter(u => u.room === room);
-    io.to(room).emit("userList", list);
-  }
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Fut:", PORT));
+server.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
+});
