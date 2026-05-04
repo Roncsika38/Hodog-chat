@@ -1,39 +1,39 @@
-require('dotenv').config();
-
-const express = require('express');
-const path = require('path');
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
 
 const app = express();
 
-// PORT (Render automatikusan ad egyet)
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Frontend kiszolgálása
+app.use(express.static(path.join(__dirname, "public")));
+
+// TEST API
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  console.log("Login:", username);
+
+  res.json({ success: true, message: "Bejelentkezve" });
+});
+
+app.post("/create-room", (req, res) => {
+  console.log("Szoba létrehozva");
+  res.json({ success: true });
+});
+
+app.post("/send-message", (req, res) => {
+  const { message } = req.body;
+  console.log("Üzenet:", message);
+
+  res.json({ success: true });
+});
+
+// PORT (EZ A LÉNYEG!)
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Statikus fájlok (public mappa)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Főoldal
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Teszt API
-app.get('/api/test', (req, res) => {
-  res.json({
-    status: 'OK',
-    message: 'Szerver működik 🚀'
-  });
-});
-
-// 404 fallback
-app.use((req, res) => {
-  res.status(404).send('404 - Nincs ilyen oldal');
-});
-
-// Szerver indítás
 app.listen(PORT, () => {
-  console.log(`Server fut a ${PORT} porton`);
+  console.log("Server fut a porton:", PORT);
 });
