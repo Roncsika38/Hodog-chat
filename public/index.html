@@ -1,117 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="hu">
 <head>
-  <title>Chat</title>
+    <meta charset="UTF-8">
+    <title>App</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h2>Login / Register</h2>
-<input id="user" placeholder="username">
-<input id="pass" placeholder="password" type="password">
-<button onclick="register()">Register</button>
-<button onclick="login()">Login</button>
+<h1>Helló!</h1>
+<button onclick="kattintas()">Kattints</button>
 
-<h2>Admin Panel</h2>
-<input id="roomName" placeholder="room name">
-<button onclick="createRoom()">Create Room</button>
-
-<h2>Chat</h2>
-<select id="rooms"></select>
-<input id="msg">
-<button onclick="send()">Send</button>
-
-<ul id="chat"></ul>
-
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-<script>
-const socket = io("http://localhost:3000");
-
-let currentUser = "";
-let isAdmin = false;
-
-async function register() {
-  await fetch("http://localhost:3000/register", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      username: user.value,
-      password: pass.value
-    })
-  });
-  alert("Regisztrálva");
-}
-
-async function login() {
-  const res = await fetch("http://localhost:3000/login", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      username: user.value,
-      password: pass.value
-    })
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    currentUser = user.value;
-    isAdmin = data.isAdmin;
-    loadRooms();
-    alert("Belépve");
-  } else {
-    alert("Hibás login");
-  }
-}
-
-async function loadRooms() {
-  const res = await fetch("http://localhost:3000/rooms");
-  const data = await res.json();
-
-  rooms.innerHTML = "";
-  data.forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r;
-    opt.text = r;
-    rooms.appendChild(opt);
-  });
-}
-
-async function createRoom() {
-  const res = await fetch("http://localhost:3000/create-room", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({
-      room: roomName.value,
-      username: currentUser
-    })
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    loadRooms();
-    alert("Szoba létrehozva");
-  } else {
-    alert("Nincs jogod");
-  }
-}
-
-function send() {
-  const room = rooms.value;
-  socket.emit("join", room);
-  socket.emit("message", {
-    room,
-    msg: msg.value,
-    user: currentUser
-  });
-}
-
-socket.on("message", data => {
-  const li = document.createElement("li");
-  li.innerText = data.user + ": " + data.msg;
-  chat.appendChild(li);
-});
-</script>
-
+<script src="app.js"></script>
 </body>
 </html>
