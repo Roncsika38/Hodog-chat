@@ -1,3 +1,5 @@
+const socket = io();
+
 let username = "";
 
 function login() {
@@ -22,13 +24,20 @@ function sendMessage() {
 
     if (!input.value.trim()) return;
 
+    socket.emit("chat message", {
+        username: username,
+        message: input.value
+    });
+
+    input.value = "";
+}
+
+socket.on("chat message", (data) => {
     const messages = document.getElementById("messages");
 
     const div = document.createElement("div");
-    div.innerHTML = "<b>" + username + ":</b> " + input.value;
+    div.innerHTML = "<b>" + data.username + ":</b> " + data.message;
 
     messages.appendChild(div);
-
-    input.value = "";
     messages.scrollTop = messages.scrollHeight;
-}
+});
