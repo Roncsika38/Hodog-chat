@@ -38,3 +38,6 @@ async function sendMessage() {
 
   alert("Elküldve");
 }
+function kattintas() {
+    login();
+}
