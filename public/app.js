@@ -1,43 +1,34 @@
-// LOGIN
-async function login() {
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      username: "test",
-      password: "1234"
-    })
-  });
+let username = "";
 
-  const data = await res.json();
-  alert(data.message);
+function login() {
+    const input = document.getElementById("username");
+
+    if (!input.value.trim()) {
+        alert("Adj meg egy felhasználónevet!");
+        return;
+    }
+
+    username = input.value.trim();
+
+    document.getElementById("chat").style.display = "block";
+    input.style.display = "none";
+
+    const btn = document.querySelector("button");
+    if (btn) btn.style.display = "none";
 }
 
-// SZOBA
-async function createRoom() {
-  await fetch("/create-room", {
-    method: "POST"
-  });
+function sendMessage() {
+    const input = document.getElementById("message");
 
-  alert("Szoba létrehozva");
-}
+    if (!input.value.trim()) return;
 
-// ÜZENET
-async function sendMessage() {
-  const message = document.querySelector("input").value;
+    const messages = document.getElementById("messages");
 
-  await fetch("/send-message", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ message })
-  });
+    const div = document.createElement("div");
+    div.innerHTML = "<b>" + username + ":</b> " + input.value;
 
-  alert("Elküldve");
-}
-function kattintas() {
-    login();
+    messages.appendChild(div);
+
+    input.value = "";
+    messages.scrollTop = messages.scrollHeight;
 }
