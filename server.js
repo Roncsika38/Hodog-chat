@@ -1,39 +1,33 @@
 const express = require("express");
-const cors = require("cors");
+const http = require("http");
+const { Server } = require("socket.io");
 const path = require("path");
 
 const app = express();
+const server = http.createServer(app);
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+const io = new Server(server, {
+  cors: {
+    origin: "*"
+  }
+});
 
-// Frontend kiszolgálása
 app.use(express.static(path.join(__dirname, "public")));
 
-// TEST API
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  console.log("Login:", username);
+io.on("connection", (socket) => {
+  console.log("Valaki csatlakozott");
 
-  res.json({ success: true, message: "Bejelentkezve" });
+  socket.on("chat message", (data) => {
+    io.emit("chat message", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Kilépett");
+  });
 });
 
-app.post("/create-room", (req, res) => {
-  console.log("Szoba létrehozva");
-  res.json({ success: true });
-});
-
-app.post("/send-message", (req, res) => {
-  const { message } = req.body;
-  console.log("Üzenet:", message);
-
-  res.json({ success: true });
-});
-
-// PORT (EZ A LÉNYEG!)
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log("Server fut a porton:", PORT);
+server.listen(PORT, () => {
+  console.log("Szerver fut:", PORT);
 });
