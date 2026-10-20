@@ -1,50 +1,117 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #1e1e2f;
-  color: white;
+  background: #101116;
+  color: #ffffff;
 }
 
 .container {
+  width: 100%;
   max-width: 600px;
-  margin: 50px auto;
-  padding: 20px;
+  margin: 0 auto;
+  padding: 16px;
   text-align: center;
 }
 
 h1 {
-  color: #4CAF50;
+  color: #ff4545;
 }
 
 input {
-  width: 90%;
+  width: 100%;
   padding: 12px;
-  margin: 10px 0;
-  border: none;
-  border-radius: 8px;
+  margin: 8px 0;
+  border: 1px solid #383943;
+  border-radius: 10px;
+  background: #20212a;
+  color: white;
   font-size: 16px;
 }
 
 button {
-  padding: 12px 20px;
+  padding: 12px 18px;
   border: none;
-  border-radius: 8px;
-  background: #4CAF50;
+  border-radius: 10px;
+  background: #e53945;
   color: white;
   font-size: 16px;
   cursor: pointer;
 }
 
 button:hover {
-  background: #45a049;
+  background: #c62836;
+}
+
+#chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 #messages {
-  height: 300px;
+  height: 55vh;
+  min-height: 250px;
+  max-height: 600px;
   overflow-y: auto;
-  background: #2b2b40;
-  padding: 10px;
-  border-radius: 8px;
-  margin: 15px 0;
+  background: #191a22;
+  padding: 12px;
+  border: 1px solid #30313c;
+  border-radius: 12px;
+  margin: 12px 0;
   text-align: left;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  overflow-wrap: anywhere;
+}
+
+.message-avatar {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #383943;
+}
+
+.message-content {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  background: #292a35;
+  border-radius: 10px;
+}
+
+.message-username {
+  display: block;
+  margin-bottom: 5px;
+  color: #ff646e;
+  font-weight: bold;
+}
+
+.message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  #messages {
+    height: 55vh;
+  }
+
+  button {
+    min-height: 44px;
+  }
 }
