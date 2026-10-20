@@ -1,35 +1,43 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hodog Chat</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hodog Chat</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <main class="container">
+    <h1>🔴 Hodog Chat</h1>
 
-<div class="container">
-    <h1>🐶 Hodog Chat</h1>
+    <section id="login">
+      <input
+        type="text"
+        id="username"
+        placeholder="Felhasználónév"
+        maxlength="30"
+        autocomplete="nickname"
+      >
+      <button type="button" onclick="login()">Belépés</button>
+    </section>
 
-    <input type="text" id="username" placeholder="Felhasználónév">
-    <button onclick="login()">Belépés</button>
+    <section id="chat" style="display: none;">
+      <div id="messages" aria-live="polite"></div>
 
-    <div id="chat" style="display:none;">
-        <div id="messages"></div>
-
+      <form id="message-form">
         <input
-            type="text"
-            id="message"
-            placeholder="Írj egy üzenetet..."
-            onkeypress="if(event.key==='Enter') sendMessage();"
+          type="text"
+          id="message"
+          placeholder="Írj egy üzenetet..."
+          maxlength="2000"
+          autocomplete="off"
         >
+        <button type="submit">Küldés</button>
+      </form>
+    </section>
+  </main>
 
-        <button onclick="sendMessage()">Küldés</button>
-    </div>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
-
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
