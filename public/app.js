@@ -3,41 +3,68 @@ const socket = io();
 let username = "";
 
 function login() {
-    const input = document.getElementById("username");
+  const input = document.getElementById("username");
+  const name = input.value.trim();
 
-    if (!input.value.trim()) {
-        alert("Adj meg egy felhasználónevet!");
-        return;
-    }
+  if (!name) {
+    alert("Adj meg egy felhasználónevet!");
+    return;
+  }
 
-    username = input.value.trim();
+  username = name;
 
-    document.getElementById("chat").style.display = "block";
-    input.style.display = "none";
-
-    const btn = document.querySelector("button");
-    if (btn) btn.style.display = "none";
+  document.getElementById("login").style.display = "none";
+  document.getElementById("chat").style.display = "flex";
+  document.getElementById("message").focus();
 }
 
 function sendMessage() {
-    const input = document.getElementById("message");
+  const input = document.getElementById("message");
+  const message = input.value.trim();
 
-    if (!input.value.trim()) return;
+  if (!message || !username) return;
 
-    socket.emit("chat message", {
-        username: username,
-        message: input.value
-    });
+  socket.emit("chat message", {
+    username: username,
+    message: message
+  });
 
-    input.value = "";
+  input.value = "";
+  input.focus();
 }
 
-socket.on("chat message", (data) => {
-    const messages = document.getElementById("messages");
+document.getElementById("message-form").addEventListener("submit", function (event) {
+  event.preventDefault();
+  sendMessage();
+});
 
-    const div = document.createElement("div");
-    div.innerHTML = "<b>" + data.username + ":</b> " + data.message;
+socket.on("chat message", function (data) {
+  const messages = document.getElementById("messages");
 
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
+  const row = document.createElement("div");
+  row.className = "message";
+
+  const avatar = document.createElement("div");
+  avatar.className = "message-avatar";
+  avatar.textContent = (data.username || "?").charAt(0).toUpperCase();
+  avatar.setAttribute("aria-label", "Profilkép helye");
+
+  const content = document.createElement("div");
+  content.className = "message-content";
+
+  const name = document.createElement("span");
+  name.className = "message-username";
+  name.textContent = data.username || "Ismeretlen";
+
+  const text = document.createElement("div");
+  text.className = "message-text";
+  text.textContent = data.message || "";
+
+  content.appendChild(name);
+  content.appendChild(text);
+  row.appendChild(avatar);
+  row.appendChild(content);
+  messages.appendChild(row);
+
+  messages.scrollTop = messages.scrollHeight;
 });
