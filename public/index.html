@@ -230,7 +230,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
   async function appendMessage(m){
     if(!m||seen.has(m.id))return;seen.add(m.id);const box=document.createElement("div");box.className="msg";
     const meta=document.createElement("div");meta.className="meta";const name=document.createElement("span");name.textContent=(m.user_id===currentUser.id?"Te":(m.sender_name||"Chat-tag"));const date=document.createElement("span");date.textContent=m.created_at?new Date(m.created_at).toLocaleString("hu-HU"):"";meta.append(name,date);
-    const body=document.createElement("div");body.textContent=m.content||"";box.append(meta,body);
+    const body=document.createElement("div");body.textContent=m.body||m.content||"";box.append(meta,body);
     let fileUrl=null;
     if(m.attachment_path&&!/^https?:\/\//i.test(m.attachment_path)){
       const {data,error}=await db.storage.from("chat-files").createSignedUrl(m.attachment_path,3600);
