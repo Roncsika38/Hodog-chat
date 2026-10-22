@@ -69,13 +69,20 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
       <div id="dmList"></div>
       <hr style="border-color:var(--line);margin:16px 0">
       <h3>Tagok</h3><p class="small">Regisztrált tagok</p><div id="memberList" class="room-list"><p class="small">Taglista betöltése…</p></div>
+      <hr style="border-color:var(--line);margin:16px 0">
+      <h3>🖼️ Háttérkép</h3>
+      <p class="small">Válassz képet a chat hátterének. Ez a beállítás ebben a böngészőben mentődik el.</p>
+      <input id="backgroundFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Háttérkép kiválasztása">
+      <button id="saveBackground" class="secondary">Háttérkép beállítása</button>
+      <button id="clearBackground" class="secondary">Eredeti háttér visszaállítása</button>
+      <p id="backgroundStatus" class="small" role="status"></p>
     </aside>
     <section class="card">
       <div class="row" style="justify-content:space-between;flex-wrap:wrap"><div><h2 id="chatTitle">Közös chat</h2><p id="who" class="small"></p></div><span id="chatType" class="pill">Nyilvános szoba</span></div>
       <div id="messages" aria-live="polite"></div>
       <form id="sendForm">
         <div class="row"><input id="message" class="grow" maxlength="2000" placeholder="Írd meg az üzeneted…" autocomplete="off"><button style="width:100px">Küldés</button></div>
-        <div class="row mobile-stack"><input id="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.txt,.doc,.docx" aria-label="Kép vagy fájl csatolása"><span class="small">Kép/fájl: a tárhely beállításától függ.</span></div>
+        <div class="row mobile-stack"><input id="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp,audio/mpeg,audio/ogg,audio/wav,audio/mp4,.mp3,.ogg,.wav,.m4a,.aac,.mp4,.pdf,.txt,.doc,.docx" aria-label="Kép vagy fájl csatolása"><span class="small">Kép, dokumentum vagy zenefájl (MP3, OGG, WAV, M4A): a tárhely beállításától függ.</span></div>
       </form>
     </section>
   </section>
@@ -229,7 +236,19 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
       const {data,error}=await db.storage.from("chat-files").createSignedUrl(m.attachment_path,3600);
       if(!error&&data?.signedUrl)fileUrl=data.signedUrl;
     }
-    if(fileUrl){if(/\.(png|jpe?g|gif|webp)(\?|$)/i.test(fileUrl)){const img=document.createElement("img");img.src=fileUrl;img.alt="Megosztott kép";img.loading="lazy";box.append(img);}else{const a=document.createElement("a");a.href=fileUrl;a.target="_blank";a.rel="noopener noreferrer";a.textContent="Csatolt fájl megnyitása (1 óráig elérhető link)";box.append(a);}}
+    if(fileUrl){
+      const attachmentName=m.attachment_name||m.file_name||fileUrl;
+      if(/\.(mp3|ogg|wav|m4a|aac|mp4)(\?|$)/i.test(attachmentName)||/^audio\//i.test(m.mime_type||"")){
+        const audio=document.createElement("audio");audio.controls=true;audio.preload="metadata";audio.src=fileUrl;
+        audio.style.width="100%";audio.style.maxWidth="420px";audio.style.display="block";audio.style.marginTop="8px";
+        audio.setAttribute("aria-label","Megosztott zene lejátszása");box.append(audio);
+      }else if(/\.(png|jpe?g|gif|webp)(\?|$)/i.test(attachmentName)){
+        const img=document.createElement("img");img.src=fileUrl;img.alt="Megosztott kép";img.loading="lazy";box.append(img);
+      }else{
+        const a=document.createElement("a");a.href=fileUrl;a.target="_blank";a.rel="noopener noreferrer";
+        a.textContent="Csatolt fájl megnyitása (1 óráig elérhető link)";box.append(a);
+      }
+    }
     $("messages").append(box);$("messages").scrollTop=$("messages").scrollHeight;
   }
   async function loadMessages(){
@@ -262,6 +281,43 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
   async function loadDMs(){const {data,error}=await db.from("messages").select("user_id,recipient_id,created_at").eq("is_private",true).or(`user_id.eq.${currentUser.id},recipient_id.eq.${currentUser.id}`).order("created_at",{ascending:false}).limit(50);if(error)return;const ids=[...new Set((data||[]).map(m=>m.user_id===currentUser.id?m.recipient_id:m.user_id).filter(Boolean))];const box=$("dmList");box.replaceChildren();if(!ids.length)return;const {data:people}=await db.from("profiles").select("id,display_name").in("id",ids);(people||[]).forEach(p=>{const b=document.createElement("button");b.className="secondary";b.textContent=p.display_name||"Privát beszélgetés";b.onclick=async()=>{dmUser=p;activeRoom=null;await loadMessages();view("app");};box.append(b);});}
   async function saveProfile(){const name=$("displayName").value.trim().slice(0,40)||currentUser.email.split("@")[0];let avatar_url=currentProfile?.avatar_url||null;const f=$("avatar").files[0];if(f){if(f.size>4*1024*1024)return say("A profilkép legfeljebb 4 MB lehet.");const path=`${currentUser.id}/avatar-${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;const {error}=await db.storage.from("chat-avatars").upload(path,f,{upsert:false});if(error)return say("Profilkép feltöltése: "+friendly(error));avatar_url=db.storage.from("chat-avatars").getPublicUrl(path).data.publicUrl;}
     const {error}=await db.from("profiles").upsert({id:currentUser.id,email:currentUser.email,display_name:name,avatar_url});if(error)return say("Profil mentése: "+friendly(error));currentProfile={id:currentUser.id,display_name:name,avatar_url};$("who").textContent=name+" · "+currentUser.email;say("Profil elmentve.");view("app");await loadMembers();}
+  function applySavedBackground(){
+    try {
+      const saved=localStorage.getItem("hodog-chat-background");
+      if(saved){
+        document.body.style.backgroundImage="linear-gradient(#03030399,#03030399),url("+JSON.stringify(saved)+")";
+        document.body.style.backgroundAttachment="fixed";
+        document.body.style.backgroundPosition="center";
+        document.body.style.backgroundSize="cover";
+        document.body.style.backgroundRepeat="no-repeat";
+      }
+    } catch(e) { console.warn("A háttérkép betöltése nem sikerült.",e); }
+  }
+  $("saveBackground").onclick=()=>{
+    const file=$("backgroundFile").files[0];
+    if(!file){$("backgroundStatus").textContent="Először válassz ki egy képet.";return;}
+    if(!/^image\/(jpeg|png|webp|gif)$/.test(file.type)){$("backgroundStatus").textContent="JPG, PNG, WEBP vagy GIF képet válassz.";return;}
+    if(file.size>1500000){$("backgroundStatus").textContent="A kép legfeljebb 1,5 MB lehet.";return;}
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try {localStorage.setItem("hodog-chat-background",reader.result);applySavedBackground();$("backgroundStatus").textContent="Háttérkép beállítva ezen a böngészőn.";}
+      catch(e) {$("backgroundStatus").textContent="Nem sikerült elmenteni. Válassz kisebb képet.";}
+    };
+    reader.readAsDataURL(file);
+  };
+  $("clearBackground").onclick=()=>{
+    try {
+      localStorage.removeItem("hodog-chat-background");
+      document.body.style.backgroundImage="";
+      document.body.style.backgroundAttachment="";
+      document.body.style.backgroundPosition="";
+      document.body.style.backgroundSize="";
+      document.body.style.backgroundRepeat="";
+      $("backgroundFile").value="";
+      $("backgroundStatus").textContent="Az eredeti háttér visszaállítva.";
+    } catch(e) {$("backgroundStatus").textContent="Nem sikerült visszaállítani a hátteret.";}
+  };
+  applySavedBackground();
   $("register").onclick=register;$("login").onclick=login;$("logout").onclick=logout;
   $("forgotPassword").onclick=requestPasswordReset;$("saveNewPassword").onclick=saveNewPassword;
   $("cancelRecovery").onclick=()=>{recoveryMode=false;history.replaceState({},document.title,location.pathname);view("auth");say("");};
