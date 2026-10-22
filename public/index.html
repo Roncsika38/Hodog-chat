@@ -263,18 +263,28 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
       }).subscribe();
   }
   async function sendMessage(e){
-    e.preventDefault();const content=$("message").value.trim();const file=$("file").files[0];if(!content&&!file)return;
-    let file_url=null, attachment_path=null;
-    if(file){
-      if(file.size>8*1024*1024)return say("A fájl legfeljebb 8 MB lehet.");
-      const path=`${currentUser.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
-      attachment_path=path;
-      const {error:upErr}=await db.storage.from("chat-files").upload(path,file,{upsert:false});
-      if(upErr)return say("Fájlfeltöltési hiba: "+friendly(upErr));
-      file_url=null;
+    e.preventDefault();
+    const content=$("message").value.trim(),file=$("file").files[0];
+    if(!content&&!file)return;
+    if(!currentUser)return say("Az üzenetküldéshez előbb jelentkezz be.");
+    if(!dmUser&&!activeRoom)return say("Nincs kiválasztva chat-szoba.");
+    try{
+      let attachment_path=null;
+      if(file){
+        if(file.size>8*1024*1024)return say("A fájl legfeljebb 8 MB lehet.");
+        const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+        const path=`${currentUser.id}/${Date.now()}-${safeName}`;
+        const {error:upErr}=await db.storage.from("chat-files").upload(path,file,{upsert:false});
+        if(upErr)return say("Fájlfeltöltési hiba: "+friendly(upErr));
+        attachment_path=path;
+      }
+      const row={user_id:currentUser.id,content:content||"",attachment_path,attachment_name:file?.name||null,is_private:!!dmUser,recipient_id:dmUser?.id||null,room_id:dmUser?null:activeRoom.id,sender_name:currentProfile?.display_name||currentUser.email.split("@")[0]};
+      const {error}=await db.from("messages").insert(row);
+      if(error)return say("Üzenetküldési hiba: "+friendly(error));
+      $("message").value="";$("file").value="";say("");
+    }catch(err){
+      say("Küldési hiba: "+friendly(err));
     }
-    const row={user_id:currentUser.id,content:content||"",file_url,attachment_path,attachment_name:file?.name||null,is_private:!!dmUser,recipient_id:dmUser?.id||null,room_id:dmUser?null:activeRoom?.id,sender_name:currentProfile?.display_name||currentUser.email.split("@")[0]};
-    const {error}=await db.from("messages").insert(row);if(error)return say("Üzenetküldési hiba: "+friendly(error));$("message").value="";$("file").value="";say("");
   }
   async function createRoom(){if(!isAdmin)return say("Nincs adminjogosultságod.");const name=$("newRoom").value.trim();if(!name)return say("Írd be a szoba nevét.");const {error}=await db.from("rooms").insert({name});if(error)return say("Szobalétrehozási hiba: "+friendly(error));$("newRoom").value="";await loadRooms();say("Szoba létrehozva.");}
   async function startDM(){const email=$("dmEmail").value.trim().toLowerCase();if(!email)return say("Írd be a másik tag e-mail-címét.");const {data,error}=await db.rpc("predator_find_profile_by_email",{p_email:email});const person=Array.isArray(data)?data[0]:data;if(error||!person)return say("Nem található ilyen tag a profilok között. A másik tagnak előbb be kell jelentkeznie és létre kell hoznia a profilját.");if(person.id===currentUser.id)return say("Saját magaddal nem indíthatsz privát beszélgetést.");dmUser={id:person.id,name:person.display_name||"Chat-tag"};activeRoom=null;await loadMessages();say("Privát beszélgetés megnyitva.");}
