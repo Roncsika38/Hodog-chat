@@ -278,7 +278,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
         if(upErr)return say("Fájlfeltöltési hiba: "+friendly(upErr));
         attachment_path=path;
       }
-      const row={user_id:currentUser.id,content:content||"",attachment_path,attachment_name:file?.name||null,is_private:!!dmUser,recipient_id:dmUser?.id||null,room_id:dmUser?null:activeRoom.id,sender_name:currentProfile?.display_name||currentUser.email.split("@")[0]};
+      const row={sender_id:currentUser.id,content:content||"",attachment_path,attachment_name:file?.name||null,is_private:!!dmUser,recipient_id:dmUser?.id||null,room_id:dmUser?null:activeRoom.id,sender_name:currentProfile?.display_name||currentUser.email.split("@")[0]};
       const {error}=await db.from("messages").insert(row);
       if(error)return say("Üzenetküldési hiba: "+friendly(error));
       $("message").value="";$("file").value="";say("");
