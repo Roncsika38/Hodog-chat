@@ -30,6 +30,75 @@ button.secondary{background:#354866}button.danger{background:#a83245}button:disa
 footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
 @media(max-width:700px){header{padding:13px}.layout{grid-template-columns:1fr}main{margin:12px auto;padding:0 9px}.card{padding:13px}#messages{height:48vh;min-height:230px}.row.mobile-stack{align-items:stretch;flex-direction:column}.row.mobile-stack>*{width:100%}.nav button{flex:1}.toolbar button{flex:1}}
 </style>
+  
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #050505;
+  --panel: #0b0b0b;
+  --line: #ff202b;
+  --blue: #ed101d;
+  --muted: #b8b8b8;
+  --text: #f5f5f5;
+}
+body {
+  background: #050505 !important;
+  color: #f5f5f5 !important;
+}
+header {
+  background: linear-gradient(90deg, #240000, #080808 65%) !important;
+  border-bottom: 1px solid #ff202b !important;
+}
+.card {
+  background: linear-gradient(145deg, #111111, #050505) !important;
+  border: 1px solid #b90c18 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 0 12px #ff101522;
+}
+button {
+  background: linear-gradient(135deg, #ff3038, #a9000b) !important;
+  color: white !important;
+  border: 1px solid #ff424a !important;
+  border-radius: 9px !important;
+}
+input, select, textarea {
+  background: #080808 !important;
+  color: white !important;
+  border: 1px solid #713036 !important;
+}
+.room-list button.active {
+  background: #57080d !important;
+  border-color: #ff202b !important;
+}
+#messages {
+  background: #060606 !important;
+  border: 1px solid #401015 !important;
+  border-radius: 12px !important;
+}
+.msg {
+  background: #101010 !important;
+  border-color: #351015 !important;
+}
+h1, h2, h3 {
+  color: #ff303b !important;
+}
+.pill {
+  border-color: #ff303b !important;
+  color: #ff7077 !important;
+}
+@media (max-width: 700px) {
+  main {
+    padding: 8px !important;
+  }
+  .layout {
+    grid-template-columns: 1fr !important;
+  }
+  #messages {
+    height: 55vh !important;
+  }
+}
+</style>
+
 </head>
 <body>
 <header>
