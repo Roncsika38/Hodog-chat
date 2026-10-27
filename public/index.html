@@ -25,7 +25,7 @@ button.secondary{background:#354866}button.danger{background:#a83245}button:disa
 .msg{padding:10px;margin:7px 0;background:#1a1112;border:1px solid #321a1d;border-radius:9px;overflow-wrap:anywhere}.meta{font-size:12px;color:#b9cbe5;margin-bottom:5px;display:flex;justify-content:space-between;gap:8px}.name-link{width:auto;margin:0;padding:0;background:transparent!important;border:0!important;color:#ff7077!important;text-decoration:underline;cursor:pointer;font:inherit;text-align:left}
 .msg img{max-width:min(100%,360px);max-height:300px;border-radius:8px;display:block;margin-top:8px}.msg a{color:#ff7a86}
 .nav{display:flex;gap:7px;flex-wrap:wrap}.nav button{width:auto;margin:0}.toolbar{display:flex;gap:7px;flex-wrap:wrap}.toolbar button{width:auto}
-.admin-room{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}.admin-room span{flex:1;overflow-wrap:anywhere}.admin-room button{width:auto}
+.admin-room{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)}.admin-room span{flex:1;overflow-wrap:anywhere;min-width:140px}.admin-room button{width:auto;padding:8px 10px;font-size:12px}
 .pill{display:inline-block;border:1px solid #41618e;border-radius:999px;padding:3px 9px;font-size:12px;color:#c5dcff}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
 @media(max-width:700px){header{padding:13px}.layout{grid-template-columns:1fr}main{margin:12px auto;padding:0 9px}.card{padding:13px}#messages{height:48vh;min-height:230px}.row.mobile-stack{align-items:stretch;flex-direction:column}.row.mobile-stack>*{width:100%}.nav button{flex:1}.toolbar button{flex:1}}
@@ -114,6 +114,7 @@ h1, h2, h3 {
     <p class="small">Regisztrálj e-mail-címmel. Ha megerősítő levelet kapsz, előbb erősítsd meg az e-mail-címedet.</p>
     <input id="email" type="email" placeholder="E-mail-cím" autocomplete="email">
     <input id="password" type="password" placeholder="Jelszó (legalább 6 karakter)" autocomplete="current-password">
+    <input id="registerName" maxlength="40" placeholder="Felhasználónév (regisztrációhoz)" autocomplete="nickname">
     <div class="row mobile-stack"><button id="register">Regisztráció</button><button id="login" class="secondary">Belépés</button></div>
     <button id="forgotPassword" class="secondary">Elfelejtett jelszó</button>
   </section>
@@ -204,10 +205,11 @@ h1, h2, h3 {
   async function register(){
     const email=$("email").value.trim(),password=$("password").value;
     if(!email||password.length<6)return say("Adj meg érvényes e-mail-címet és legalább 6 karakteres jelszót.");
+     if(!displayName)return say("Regisztrációhoz adj meg egy felhasználónevet.");
     say("Regisztráció folyamatban…");
-    try{const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;
+    try{const {data,error}=await db.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname,data:{display_name:displayName,username:displayName}}});if(error)throw error;
       if(data.session){currentUser=data.user;await afterLogin();say("Sikeres regisztráció.");}
-      else say("A regisztráció elkészült. Ellenőrizd az e-mailjeidet, erősítsd meg a címedet, majd jelentkezz be.");
+      else say("A regisztrációs kérelem elkészült. Ha a Supabase e-mail-megerősítést kér, nyisd meg a levelet, majd jelentkezz be. Ha nem érkezik levél, a Supabase Authentication → Providers → Email beállításait kell ellenőrizni.");
     }catch(e){say("Regisztrációs hiba: "+friendly(e));}
   }
   async function login(){
@@ -232,17 +234,28 @@ h1, h2, h3 {
   function enterRecovery(){recoveryMode=true;view("auth");say("A visszaállító link megnyílt. Add meg kétszer az új jelszót.");}
   async function afterLogin(){
     view("app");$("who").textContent=currentUser.email;await loadProfile();await checkAdmin();await loadRooms();await loadDMs();await loadMembers();
+    const {data:mod,error:modError}=await db.rpc("predator_get_my_moderation");
+    if(!modError&&mod&&(mod.action==="ban"||mod.action==="kick")){
+      const expiry=mod.expires_at?new Date(mod.expires_at).toLocaleString("hu-HU"):"végleges";
+      say("A fiókod moderálás miatt tiltva van ("+expiry+"). Indok: "+(mod.reason||"nincs megadva")+".");
+      await db.auth.signOut();signedOut();
+    }
   }
   async function logout(){const {error}=await db.auth.signOut();if(error)say(friendly(error));else{signedOut();say("Kiléptél.");}}
   async function loadProfile(){
     const {data,error}=await db.from("profiles").select("id,display_name,avatar_url").eq("id",currentUser.id).maybeSingle();
     if(error){say("Profil betöltése: "+friendly(error));return;}
-    currentProfile=data||{id:currentUser.id,display_name:currentUser.email.split("@")[0],avatar_url:null};
+    if(!data){
+      const metaName=(currentUser.user_metadata?.display_name||currentUser.user_metadata?.username||currentUser.email.split("@")[0]).toString().slice(0,40);
+      const {data:created,error:createError}=await db.from("profiles").upsert({id:currentUser.id,email:currentUser.email,display_name:metaName,avatar_url:null},{onConflict:"id"}).select("id,display_name,avatar_url").maybeSingle();
+      if(createError){say("A profil létrehozása nem sikerült: "+friendly(createError));currentProfile={id:currentUser.id,display_name:metaName,avatar_url:null};}
+      else currentProfile=created||{id:currentUser.id,display_name:metaName,avatar_url:null};
+    }else currentProfile=data;
     $("displayName").value=currentProfile.display_name||"";
   }
   async function checkAdmin(){
     const {data,error}=await db.from("user_roles").select("role").eq("user_id",currentUser.id).maybeSingle();
-    isAdmin=!error&&data?.role==="admin";isOwner=(currentUser.email||"").toLowerCase()==="roncsika635@gmail.com";$("adminTab").style.display=isAdmin?"inline-block":"none";
+    isOwner=(currentUser.email||"").toLowerCase()==="roncsika635@gmail.com";isAdmin=(!error&&data?.role==="admin")||isOwner;$("adminTab").style.display=isAdmin?"inline-block":"none";
   }
   async function loadRooms(){
     const {data,error}=await db.from("rooms").select("id,name").order("name");if(error){say("Szobák betöltése: "+friendly(error));return;}
@@ -288,6 +301,24 @@ h1, h2, h3 {
         const row=document.createElement("div");row.className="admin-room";
         const label=document.createElement("span");label.textContent=(member.display_name||"Névtelen tag")+" · "+(roleMap.get(member.id)||"user");
         row.append(label);
+        if(member.id!==currentUser.id){
+          const addModerationButton=(text,action,duration)=>{
+            const b=document.createElement("button");b.className="danger";b.textContent=text;
+            b.onclick=async()=>{
+              if(!confirm("Biztosan végrehajtod: "+text+" — "+(member.display_name||"Névtelen tag")+"?"))return;
+              const reason=prompt("Moderálás indoka (nem kötelező):","")||null;
+              const {error}=await db.rpc("predator_moderate_member",{p_user_id:member.id,p_action:action,p_duration_minutes:duration,p_reason:reason});
+              if(error){say("Moderálási hiba: "+friendly(error)+". Ellenőrizd, hogy a moderálási SQL-kódot lefuttattad-e.");return;}
+              say("Moderálás rögzítve: "+(member.display_name||"Névtelen tag")+" — "+text+".");await loadMembers();
+            };
+            row.append(b);
+          };
+          addModerationButton("Kirúgás","kick",1);
+          addModerationButton("10 perc","ban",10);
+          addModerationButton("30 perc","ban",30);
+          addModerationButton("1 óra","ban",60);
+          addModerationButton("Végleges ban","ban",0);
+        }
         if(isOwner&&member.id!==currentUser.id){
           const b=document.createElement("button");b.className="secondary";
           const currentlyAdmin=roleMap.get(member.id)==="admin";
@@ -333,7 +364,7 @@ h1, h2, h3 {
   async function loadMessages(){
     stopChannel();seen=new Set();$("messages").replaceChildren();if(!currentUser)return;
     const title=$("chatTitle");$("chatType").textContent=dmUser?"Privát üzenet":"Nyilvános szoba";
-    if(dmUser){title.textContent="Privát beszélgetés";const {data,error}=await db.from("messages").select("id,user_id,content,attachment_path,attachment_name,created_at,sender_name").eq("is_private",true).or(`and(user_id.eq.${currentUser.id},recipient_id.eq.${dmUser.id}),and(user_id.eq.${dmUser.id},recipient_id.eq.${currentUser.id})`).order("created_at").limit(100);if(error){say("Privát üzenetek: "+friendly(error));return;}(data||[]).forEach(appendMessage);}
+    if(dmUser){title.textContent="Privát beszélgetés"+(dmUser.name?": "+dmUser.name:"");const {data,error}=await db.from("messages").select("id,user_id,content,attachment_path,attachment_name,created_at,sender_name").eq("is_private",true).or(`and(user_id.eq.${currentUser.id},recipient_id.eq.${dmUser.id}),and(user_id.eq.${dmUser.id},recipient_id.eq.${currentUser.id})`).order("created_at").limit(100);if(error){say("Privát üzenetek: "+friendly(error));return;}(data||[]).forEach(appendMessage);}
     else {if(!activeRoom)return;title.textContent=activeRoom.name;const {data,error}=await db.from("messages").select("id,user_id,content,attachment_path,attachment_name,created_at,sender_name").eq("room_id",activeRoom.id).eq("is_private",false).order("created_at").limit(100);if(error){say("Üzenetek: "+friendly(error));return;}(data||[]).forEach(appendMessage);}
     channel=db.channel("predator-"+(dmUser?("dm-"+[currentUser.id,dmUser.id].sort().join("-")):("room-"+activeRoom.id)))
       .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},p=>{
@@ -357,7 +388,7 @@ h1, h2, h3 {
         if(upErr)return say("Fájlfeltöltési hiba: "+friendly(upErr));
         attachment_path=path;
       }
-    const row={sender_id:currentUser.id,content:content||"",body:content||"",attachment_path,attachment_name:file?.name||null,is_private:!!dmUser,recipient_id:dmUser?.id||null,room_id:dmUser?null:activeRoom.id,sender_name:currentProfile?.display_name||currentUser.email.split("@")[0]};
+    const row={user_id:currentUser.id,sender_id:currentUser.id,content:content||"",body:content||"",attachment_path,attachment_name:file?.name||null,is_private:!!dmUser,recipient_id:dmUser?.id||null,room_id:dmUser?null:activeRoom.id,sender_name:currentProfile?.display_name||currentUser.email.split("@")[0]};
       const {error}=await db.from("messages").insert(row);
       if(error)return say("Üzenetküldési hiba: "+friendly(error));
       $("message").value="";$("file").value="";say("");
