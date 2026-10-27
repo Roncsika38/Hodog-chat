@@ -22,10 +22,10 @@ button.secondary{background:#354866}button.danger{background:#a83245}button:disa
 #app,#admin,#profilePanel{display:none}.layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px}
 .room-list button{margin-top:6px;text-align:left;background:#1b1112;font-weight:500}.room-list button.active{background:var(--blue)}
 #messages{height:390px;overflow:auto;background:#050505;padding:10px;border-radius:10px;margin:12px 0}
-.msg{padding:10px;margin:7px 0;background:#1a1112;border:1px solid #321a1d;border-radius:9px;overflow-wrap:anywhere}.meta{font-size:12px;color:#b9cbe5;margin-bottom:5px;display:flex;justify-content:space-between;gap:8px}
+.msg{padding:10px;margin:7px 0;background:#1a1112;border:1px solid #321a1d;border-radius:9px;overflow-wrap:anywhere}.meta{font-size:12px;color:#b9cbe5;margin-bottom:5px;display:flex;justify-content:space-between;gap:8px}.name-link{width:auto;margin:0;padding:0;background:transparent!important;border:0!important;color:#ff7077!important;text-decoration:underline;cursor:pointer;font:inherit;text-align:left}
 .msg img{max-width:min(100%,360px);max-height:300px;border-radius:8px;display:block;margin-top:8px}.msg a{color:#ff7a86}
 .nav{display:flex;gap:7px;flex-wrap:wrap}.nav button{width:auto;margin:0}.toolbar{display:flex;gap:7px;flex-wrap:wrap}.toolbar button{width:auto}
-.admin-room{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid var(--line)}.admin-room span{flex:1;overflow-wrap:anywhere;min-width:130px}.admin-room button{width:auto;margin-top:4px;padding:8px 10px;font-size:13px}
+.admin-room{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}.admin-room span{flex:1;overflow-wrap:anywhere}.admin-room button{width:auto}
 .pill{display:inline-block;border:1px solid #41618e;border-radius:999px;padding:3px 9px;font-size:12px;color:#c5dcff}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
 @media(max-width:700px){header{padding:13px}.layout{grid-template-columns:1fr}main{margin:12px auto;padding:0 9px}.card{padding:13px}#messages{height:48vh;min-height:230px}.row.mobile-stack{align-items:stretch;flex-direction:column}.row.mobile-stack>*{width:100%}.nav button{flex:1}.toolbar button{flex:1}}
@@ -137,7 +137,7 @@ h1, h2, h3 {
       <button id="startDm" class="secondary">Beszélgetés indítása</button>
       <div id="dmList"></div>
       <hr style="border-color:var(--line);margin:16px 0">
-      <h3>Tagok</h3><p class="small">Regisztrált tagok</p><div id="memberList" class="room-list"><p class="small">Taglista betöltése…</p></div>
+      <h3>Tagok</h3><p class="small">Kattints egy tag nevére privát beszélgetés indításához.</p><div id="memberList" class="room-list"><p class="small">Taglista betöltése…</p></div>
       <hr style="border-color:var(--line);margin:16px 0">
       <h3>🖼️ Háttérkép</h3>
       <p class="small">Válassz képet a chat hátterének. Ez a beállítás ebben a böngészőben mentődik el.</p>
@@ -168,8 +168,7 @@ h1, h2, h3 {
     <p class="small">A műveleteket az adatbázis jogosultságai is ellenőrzik.</p>
     <h3>Új szoba</h3><div class="row"><input id="newRoom" maxlength="60" placeholder="Szoba neve"><button id="createRoom" style="width:180px">Létrehozás</button></div>
     <h3 style="margin-top:20px">Szobák kezelése</h3><div id="adminRoomList"></div>
-    <h3 style="margin-top:20px">Tagok, moderálás és jogosultságok</h3>
-<p class="small">Moderálás: kirúgás, 10 perc, 30 perc, 1 óra vagy végleges bannolás.</p>
+    <h3 style="margin-top:20px">Tagok és jogosultságok</h3>
     <p class="small">A tagok nevét itt látod. Adminjogot kizárólag a tulajdonosi fiók adhat vagy vehet el.</p>
     <div id="adminMemberList"></div><button id="backChat" class="secondary">Vissza a chathez</button>
   </section>
@@ -184,7 +183,7 @@ h1, h2, h3 {
   const say = s => $("status").textContent = s || "";
   if (!window.supabase) { say("A Supabase klienskönyvtár nem töltődött be. Ellenőrizd az internetet, majd frissítsd az oldalt."); return; }
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  let currentUser=null, currentProfile=null, activeRoom=null, dmUser=null, channel=null, seen=new Set(), isAdmin=false, isOwner=false, recoveryMode=false, moderationTimer=null;
+  let currentUser=null, currentProfile=null, activeRoom=null, dmUser=null, channel=null, seen=new Set(), isAdmin=false, isOwner=false, recoveryMode=false;
   const friendly = e => {
     const m=e?.message||String(e||"Ismeretlen hiba");
     if (/invalid api key/i.test(m)) return "A Supabase API-kulcs hibás. A Publishable key teljes értékét ellenőrizd.";
@@ -231,31 +230,7 @@ h1, h2, h3 {
     catch(e){say("Nem sikerült elmenteni a jelszót: "+friendly(e)+". Kérj új visszaállító levelet, és a legfrissebb linket nyisd meg.");}
   }
   function enterRecovery(){recoveryMode=true;view("auth");say("A visszaállító link megnyílt. Add meg kétszer az új jelszót.");}
-  async function checkMyModeration(showMessage=false){
-    if(!currentUser)return null;
-    const {data,error}=await db.rpc("predator_get_my_moderation");
-    if(error){if(showMessage)say("Moderálás ellenőrzési hiba: "+friendly(error));return null;}
-    const m=data||{};
-    if(m.action==="ban"||m.action==="kick"){
-      const until=m.expires_at?new Date(m.expires_at).toLocaleString("hu-HU"):"véglegesen";
-      say("A fiók moderálás miatt tiltva van ("+until+"). Indok: "+(m.reason||"nincs megadva")+".");
-      await db.auth.signOut();signedOut();return m;
-    }
-    return m;
-  }
-  async function moderateMember(userId,name,action,duration){
-    if(!isAdmin)return say("Nincs moderátori jogosultságod.");
-    const label=action==="kick"?"kirúgás":duration===0?"végleges bannolás":duration+" perces tiltás";
-    if(!confirm("Biztosan végrehajtod: "+label+"?\\nTag: "+name))return;
-    const reason=prompt("Indok (nem kötelező):","")||null;
-    const {error}=await db.rpc("predator_moderate_member",{p_user_id:userId,p_action:action,p_duration_minutes:duration,p_reason:reason});
-    if(error){say("Moderálási hiba: "+friendly(error)+". Ellenőrizd, hogy a moderálási SQL lefutott-e.");return;}
-    say("Moderálás sikeres: "+name+" — "+label+".");
-    await loadMembers();
-  }
   async function afterLogin(){
-    const m=await checkMyModeration();
-    if(!currentUser||m?.action==="ban"||m?.action==="kick")return;
     view("app");$("who").textContent=currentUser.email;await loadProfile();await checkAdmin();await loadRooms();await loadDMs();await loadMembers();
   }
   async function logout(){const {error}=await db.auth.signOut();if(error)say(friendly(error));else{signedOut();say("Kiléptél.");}}
@@ -267,7 +242,7 @@ h1, h2, h3 {
   }
   async function checkAdmin(){
     const {data,error}=await db.from("user_roles").select("role").eq("user_id",currentUser.id).maybeSingle();
-    isOwner=(currentUser.email||"").toLowerCase()==="roncsika635@gmail.com";isAdmin=(!error&&data?.role==="admin")||isOwner;$("adminTab").style.display=isAdmin?"inline-block":"none";
+    isAdmin=!error&&data?.role==="admin";isOwner=(currentUser.email||"").toLowerCase()==="roncsika635@gmail.com";$("adminTab").style.display=isAdmin?"inline-block":"none";
   }
   async function loadRooms(){
     const {data,error}=await db.from("rooms").select("id,name").order("name");if(error){say("Szobák betöltése: "+friendly(error));return;}
@@ -281,6 +256,16 @@ h1, h2, h3 {
     if(!isAdmin)return;const {data,error}=await db.from("rooms").select("id,name").order("name");if(error)return;
     const list=$("adminRoomList");list.replaceChildren();(data||[]).forEach(r=>{const row=document.createElement("div");row.className="admin-room";const s=document.createElement("span");s.textContent=r.name;const b=document.createElement("button");b.className="danger";b.textContent="Törlés";b.onclick=async()=>{if(!confirm("Törlöd ezt a szobát és az üzeneteit?"))return;const {error}=await db.from("rooms").delete().eq("id",r.id);if(error)say(friendly(error));else{if(activeRoom?.id===r.id)activeRoom=null;await loadRooms();say("Szoba törölve.");}};row.append(s,b);list.append(row);});
   }
+  async function openPrivateChat(person){
+    if(!currentUser)return say("Előbb jelentkezz be.");
+    if(!person?.id)return say("Nem található ez a tag.");
+    if(person.id===currentUser.id)return say("Ez a saját profilod.");
+    dmUser={id:person.id,name:person.display_name||"Chat-tag"};
+    activeRoom=null;
+    view("app");
+    await loadMessages();
+    say("Privát beszélgetés megnyitva: "+dmUser.name);
+  }
   async function loadMembers(){
     if(!currentUser)return;
     const {data,error}=await db.from("profiles").select("id,display_name,avatar_url").order("display_name",{ascending:true}).limit(200);
@@ -291,7 +276,7 @@ h1, h2, h3 {
       const b=document.createElement("button");b.className="secondary";
       b.textContent=(p.display_name||"Névtelen tag")+(p.id===currentUser.id?" (te)":"");
       b.title="Tag neve: "+(p.display_name||"Névtelen tag");
-      if(p.id!==currentUser.id){b.onclick=()=>{say("Privát beszélgetéshez a tag e-mail-címét add meg a Privát üzenet résznél.");};}
+      if(p.id!==currentUser.id){b.onclick=()=>openPrivateChat(p);}
       list.append(b);
     });
     if(!data?.length){const p=document.createElement("p");p.className="small";p.textContent="Még nincs megjeleníthető tag.";list.append(p);}
@@ -316,18 +301,6 @@ h1, h2, h3 {
           };
           row.append(b);
         }
-        if(member.id!==currentUser.id){
-          const addModButton=(text,action,duration)=>{
-            const b=document.createElement("button");b.className="danger";b.textContent=text;
-            b.onclick=()=>moderateMember(member.id,member.display_name||"Névtelen tag",action,duration);
-            row.append(b);
-          };
-          addModButton("Kirúgás","kick",1);
-          addModButton("10 perc","ban",10);
-          addModButton("30 perc","ban",30);
-          addModButton("1 óra","ban",60);
-          addModButton("Végleges ban","ban",0);
-        }
         adminList.append(row);
       });
       if(!data?.length){adminList.textContent="Nincs tag.";}
@@ -335,7 +308,7 @@ h1, h2, h3 {
   }
   async function appendMessage(m){
     if(!m||seen.has(m.id))return;seen.add(m.id);const box=document.createElement("div");box.className="msg";
-    const meta=document.createElement("div");meta.className="meta";const name=document.createElement("span");name.textContent=(m.user_id===currentUser.id?"Te":(m.sender_name||"Chat-tag"));const date=document.createElement("span");date.textContent=m.created_at?new Date(m.created_at).toLocaleString("hu-HU"):"";meta.append(name,date);
+    const meta=document.createElement("div");meta.className="meta";let name;if(m.user_id===currentUser.id){name=document.createElement("span");name.textContent="Te";}else{name=document.createElement("button");name.className="name-link";name.type="button";name.textContent=m.sender_name||"Chat-tag";name.title="Kattints privát üzenet küldéséhez";name.onclick=async()=>{let person=null;const {data,error}=await db.from("profiles").select("id,display_name,avatar_url").eq("id",m.user_id||m.sender_id).maybeSingle();if(!error&&data)person=data;else if(m.user_id||m.sender_id)person={id:m.user_id||m.sender_id,display_name:m.sender_name||"Chat-tag"};if(person)await openPrivateChat(person);};}const date=document.createElement("span");date.textContent=m.created_at?new Date(m.created_at).toLocaleString("hu-HU"):"";meta.append(name,date);
     const body=document.createElement("div");body.textContent=m.body||m.content||"";box.append(meta,body);
     let fileUrl=null;
     if(m.attachment_path&&!/^https?:\/\//i.test(m.attachment_path)){
@@ -373,9 +346,6 @@ h1, h2, h3 {
     const content=$("message").value.trim(),file=$("file").files[0];
     if(!content&&!file)return;
     if(!currentUser)return say("Az üzenetküldéshez előbb jelentkezz be.");
-    const moderation=await checkMyModeration();
-    if(!currentUser||moderation?.action==="ban"||moderation?.action==="kick")return;
-    if(moderation?.action==="mute")return say("Moderálás miatt most nem küldhetsz üzenetet.");
     if(!dmUser&&!activeRoom)return say("Nincs kiválasztva chat-szoba.");
     try{
       let attachment_path=null;
@@ -437,7 +407,6 @@ h1, h2, h3 {
     } catch(e) {$("backgroundStatus").textContent="Nem sikerült visszaállítani a hátteret.";}
   };
   applySavedBackground();
-  moderationTimer=setInterval(()=>{if(currentUser)checkMyModeration();},15000);
   $("register").onclick=register;$("login").onclick=login;$("logout").onclick=logout;
   $("forgotPassword").onclick=requestPasswordReset;$("saveNewPassword").onclick=saveNewPassword;
   $("cancelRecovery").onclick=()=>{recoveryMode=false;history.replaceState({},document.title,location.pathname);view("auth");say("");};
